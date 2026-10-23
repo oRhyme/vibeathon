@@ -1,5 +1,8 @@
 {
-  "name": "relaysafe", "private": true, "version": "0.1.0", "type": "module",
+  "name": "relaysafe",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
   "scripts": {
     "dev": "tsx server/index.ts",
     "build": "tsc --noEmit && vite build",
@@ -7,6 +10,23 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "dependencies": {"express": "^5.3.0", "react": "^19.3.1", "react-dom": "^19.3.1", "lucide-react": "^0.468.0"},
-  "devDependencies": {"@types/express": "^5.0.0", "@types/node": "^22.0.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "@vitejs/plugin-react": "latest", "vite": "^8.3.5", "vitest": "^5.0.5", "typescript": "latest", "tsx": "latest"}
+  "dependencies": {
+    "express": "^5.3.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "latest",
+    "prettier": "^3.9.10",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
 }
