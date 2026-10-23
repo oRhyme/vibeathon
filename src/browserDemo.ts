@@ -7,7 +7,14 @@ export function readBrowserState(): OperationsState {
   const saved = localStorage.getItem(KEY);
   if (saved) {
     const state = JSON.parse(saved) as OperationsState;
-    if (!Array.isArray(state.batches) || !Array.isArray(state.events) || !Number.isSafeInteger(state.version)) throw new Error("Invalid browser demo snapshot. Clear this site's demo storage to reset it.");
+    if (
+      !Array.isArray(state.batches) ||
+      !Array.isArray(state.events) ||
+      !Number.isSafeInteger(state.version)
+    )
+      throw new Error(
+        "Invalid browser demo snapshot. Clear this site's demo storage to reset it.",
+      );
     return state;
   }
   const state = createSeed();

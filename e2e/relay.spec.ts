@@ -66,7 +66,9 @@ test("judge can demonstrate a ghost lease warning, release, and replacement from
     .getByRole("button", { name: "Operations control", exact: true })
     .click();
   await page.getByRole("button", { name: "Auto-dispatch network" }).click();
-  await expect(page.locator(".ledger-title").filter({ hasText: "Fatima" }).first()).toBeVisible();
+  await expect(
+    page.locator(".ledger-title").filter({ hasText: "Fatima" }).first(),
+  ).toBeVisible();
 });
 
 test("pickup, in-transit closure, reroute and receipt work through real controls", async ({

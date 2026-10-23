@@ -6,6 +6,10 @@ A working, deterministic prototype for the Vibe-A-Thon perishable-aid micro-logi
 
 ## Start
 
+### Deploy quickly to Vercel
+
+Import this repo, use the Vite preset (build `npm run build`, output `dist`), and deploy. `vercel.json` sets these defaults. If no operations API exists, the UI explicitly enters **browser-local demo mode**: it uses the same rules engine and persists to browser storage. This supports judging on static hosting, but is not a shared backend or cross-device synchronization. The local Express mode below remains the full shared-state implementation.
+
 Requires Node.js 22.12+ and npm. From the repository root:
 
 ```sh

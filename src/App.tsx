@@ -92,7 +92,9 @@ export default function App() {
           setConnected(true);
           setLoadError("");
           return;
-        } catch { /* Keep an explicit failure if browser storage is unavailable. */ }
+        } catch {
+          /* Keep an explicit failure if browser storage is unavailable. */
+        }
       }
       setConnected(false);
       setLoadError(
@@ -125,18 +127,22 @@ export default function App() {
       busyRef.current = true;
       setBusy(true);
       try {
-        const response = demoRef.current ? null : await fetch("/api/actions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Idempotency-Key":
-              globalThis.crypto?.randomUUID?.() ??
-              `command-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          },
-          body: JSON.stringify(action),
-          signal: AbortSignal.timeout(15000),
-        });
-        const result = demoRef.current ? await browserAction(action) : (await response!.json()) as ActionResult;
+        const response = demoRef.current
+          ? null
+          : await fetch("/api/actions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Idempotency-Key":
+                  globalThis.crypto?.randomUUID?.() ??
+                  `command-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              },
+              body: JSON.stringify(action),
+              signal: AbortSignal.timeout(15000),
+            });
+        const result = demoRef.current
+          ? await browserAction(action)
+          : ((await response!.json()) as ActionResult);
         if (result.state) merge(result.state);
         setToast({ ok: result.ok, code: result.code, message: result.message });
         if (!result.ok) {
@@ -239,9 +245,15 @@ export default function App() {
           <div className="sidebar-status">
             <strong>
               <span className={`live-dot ${connected ? "" : "offline"}`} />{" "}
-              {connected ? "Shared state connected" : "Reconnecting"}
+              {localDemo
+                ? "Browser-local demo"
+                : connected
+                  ? "Shared state connected"
+                  : "Reconnecting"}
             </strong>
-            One network. Every role in sync.
+            {localDemo
+              ? "Saved in this browser, not a shared backend."
+              : "One network. Every role in sync."}
           </div>
           <p>
             Keep good moving.
@@ -280,6 +292,13 @@ export default function App() {
             </button>
           </div>
         </header>
+        {localDemo && (
+          <div className="connection-banner" role="status">
+            <ShieldCheck size={15} />
+            Static demo mode · actions use the same safety engine and save in
+            this browser. No shared server or cross-device sync.
+          </div>
+        )}
         {loadError && state && (
           <div className="connection-banner" role="alert">
             <Radio size={15} />
