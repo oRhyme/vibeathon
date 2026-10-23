@@ -13,8 +13,11 @@ Start with `npm ci` then `npm run dev`; open `http://localhost:5173`. Follow the
 - `npm run typecheck`: passed.
 - `npx prettier --check package.json server/app.ts src/App.tsx src/browserDemo.ts src/ErrorBoundary.tsx src/main.tsx src/shell.css tests/api.test.ts tests/browserDemo.test.ts render.yaml`: passed.
 - `git diff --check`: passed.
+- Clean-install preflight: `npm ci` completed with 0 vulnerabilities, followed by a successful `npm run build`.
 - Production smoke: `npm start` with a supplied `PORT` served `/health` as JSON with a per-process boot ID.
+- Production asset/API preflight: a clean `npm start` on `PORT=4391` served `/`, returned the seeded `/api/state` payload (2 batches, 6 riders, 5 receivers, 1 event), and passed `/health` validation. The process was stopped after the check.
 - Targeted browser smoke: `npx playwright test e2e/relay.spec.ts --grep "desktop operations renders honest zero state"` passed against the normal shared server; the UI loaded, dispatched the real 180-unit split, and reported no page errors.
+- README deployment runbook updated with the Render dashboard steps, health/state curl checks, Free-tier caveats, and a reproducible local production preflight command.
 - Real browser dashboard inspected at desktop width; browser-suite screenshots inspected at desktop and 390px phone width.
 - Last `npm run test:e2e`: **7 passed, 1 failed**. Passed: split allocations, donor creation shared across tabs, full pickup/closure/reroute/receipt, missing-fuel reason code, and all four role views without horizontal overflow at 1440/768/390px.
 - Remaining last-run failure: ghost-reservation scenario’s final `getByText("Fatima").first()` selected a hidden SVG `<title>` instead of the visible relay ledger. Timeout/release and reserve-rider activation completed; screenshot and server-backed UI showed a new 40-unit allocation. Selector is now scoped to `.ledger-title`; **not rerun after that correction**, respecting the request to stop repeated browser-suite retries.

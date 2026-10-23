@@ -23,6 +23,35 @@ Node: 22
 
 Render serves the built React app and the Express API from one origin. It injects `PORT`; the server binds to `0.0.0.0` and exposes both `/health` and `/api/health`. Free instances can sleep and have an ephemeral filesystem, so an idle/restarted service may return to the seeded demo. The client detects the per-process `X-RelaySafe-Boot-Id`, reloads the new seed snapshot, and shows a reset notice rather than keeping stale state. During a cold start it keeps the last snapshot read-only and retries with backoff; it does not silently switch a shared session into local mode.
 
+#### Render dashboard runbook
+
+1. Push the current `main` branch to the GitHub repository.
+2. In Render, choose **New → Web Service**, connect the repository, and select `main`.
+3. Confirm the service is using the repository `render.yaml`, or enter these values manually:
+
+   ```text
+   Runtime: Node
+   Build command: npm ci && npm run build
+   Start command: npm start
+   Health check path: /health
+   Node version: 22
+   ```
+
+4. Do not hard-code `PORT`; Render supplies it. `DATA_FILE` is optional. The default local JSON snapshot is suitable for a demo session, but Render Free storage is ephemeral.
+5. Create the service and wait for the first deploy to finish. Open the generated `https://…onrender.com` URL once before judging so a sleeping Free instance has time to wake.
+6. Verify the service before using the UI:
+
+   ```sh
+   curl -fsS https://YOUR-SERVICE.onrender.com/health
+   curl -fsS https://YOUR-SERVICE.onrender.com/api/state
+   ```
+
+   The first response must contain `"ok":true` and a `bootId`; the second must contain seeded batches, riders, receivers, and events.
+
+7. Open the URL in an incognito window and run the five-minute judge demo. If the service sleeps or restarts, wait for the read-only waking banner; do not refresh repeatedly or assume an unconfirmed action completed.
+
+For a persistent production deployment, replace the local JSON snapshot with durable storage and add authentication before exposing real operational data. This repository is still a public-demo prototype with no login or authorization.
+
 Requires Node.js 22.12+ and npm. From the repository root:
 
 ```sh
@@ -102,6 +131,18 @@ npm run format:check
 ```
 
 The current Phase 0 baseline has **97 passing tests** (87 domain, 7 API, 3 browser-demo persistence/error cases). A production smoke check also starts `npm start` on a supplied `PORT` and confirms `/health` returns JSON with a boot ID.
+
+Phase 1 production preflight can be reproduced locally with:
+
+```sh
+npm ci
+npm run build
+PORT=4387 DATA_FILE=/tmp/relaysafe-preflight.json npm start
+curl -fsS http://127.0.0.1:4387/health
+curl -fsS http://127.0.0.1:4387/api/state
+```
+
+The server should bind on `0.0.0.0`, serve the built app at `/`, return JSON from `/health`, and return the seeded shared state from `/api/state`.
 
 Browser suite (isolated server on port 5174, separate local data file):
 
