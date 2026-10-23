@@ -342,22 +342,69 @@
 .event-message {
   font-size: 12px !important;
 }
-.eyebrow, .sidebar-label { font-size: 10px; letter-spacing: 1.1px; }
-.nav-item { font-size: 13px; }
-.metric-label { font-size: 12px; }
-.metric-detail { font-size: 11px; color: #697461; }
-.metric-value span { font-size: 11px; }
-.field { font-size: 12px; }
-.input, .select, textarea.input { font-size: 12px; }
-.badge { font-size: 10px; }
-.button, .button.small { font-size: 12px; }
-.stock-line span, .stock-line strong span, .stock-breakdown, .queue-action { font-size: 11px !important; }
-.network-live-top, .network-live-bottom, .network-live-numbers span { font-size: 10px; }
-.queue-index, .map-caption, .metric-label { color: #65735c; }
-.event-row p { font-size: 12px; line-height: 1.6; }
-.flow-guide { font-size: 12px; }
-.app-footer { font-size: 10px; }
-.role-compatibility-row code { font-size: 10px; overflow-wrap: anywhere; }
+.eyebrow,
+.sidebar-label {
+  font-size: 10px;
+  letter-spacing: 1.1px;
+}
+.nav-item {
+  font-size: 13px;
+}
+.metric-label {
+  font-size: 12px;
+}
+.metric-detail {
+  font-size: 11px;
+  color: #697461;
+}
+.metric-value span {
+  font-size: 11px;
+}
+.field {
+  font-size: 12px;
+}
+.input,
+.select,
+textarea.input {
+  font-size: 12px;
+}
+.badge {
+  font-size: 10px;
+}
+.button,
+.button.small {
+  font-size: 12px;
+}
+.stock-line span,
+.stock-line strong span,
+.stock-breakdown,
+.queue-action {
+  font-size: 11px !important;
+}
+.network-live-top,
+.network-live-bottom,
+.network-live-numbers span {
+  font-size: 10px;
+}
+.queue-index,
+.map-caption,
+.metric-label {
+  color: #65735c;
+}
+.event-row p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.flow-guide {
+  font-size: 12px;
+}
+.app-footer {
+  font-size: 10px;
+}
+.role-compatibility-row code {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
 @media (min-width: 1201px) {
   .topbar {
     height: 72px;
@@ -451,4 +498,13 @@
   .connection-banner {
     padding: 12px 20px;
   }
+  .app-shell { grid-template-columns: minmax(0, 1fr); }
+  .sidebar, .sidebar nav, .main-content { min-width: 0; }
+  .sidebar nav { max-width: 100%; }
+  .dashboard-heading { flex-direction: column; }
+  .dashboard-heading > div { width: 100%; min-width: 0; }
+  .dashboard-heading .dispatch-button { font-size: 12px; width: 100%; margin-top: 8px; }
+  .dashboard-heading .dispatch-button svg:last-child { display: block; margin-left: auto; }
+  .network-svg { width: 100%; margin-left: 0; }
+  .simulation-clock-actions { flex-wrap: wrap; }
 }
