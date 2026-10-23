@@ -1295,6 +1295,7 @@ function ReceiverSettings({
         <label className="role-check">
           <input
             type="checkbox"
+            aria-label="Receiver open status"
             checked={receiver.isOpen}
             disabled={busy}
             onChange={(event) =>

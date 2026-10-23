@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Warehouse,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import OperationsDashboard from "./components/OperationsDashboard";
 import {
@@ -29,6 +30,8 @@ import {
   RiderConsole,
 } from "./components/RoleConsoles";
 import {
+  ACTIVE_RESERVATIONS,
+  batchTotals,
   formatTime,
   type Action,
   type ActionResult,
@@ -42,6 +45,174 @@ const roles = [
   { id: "receiver", label: "Receiving points", icon: Warehouse },
 ] as const;
 type Role = (typeof roles)[number]["id"];
+type AppRoute = Role | null;
+
+function routeFromHash(): AppRoute {
+  const hash = globalThis.location?.hash.slice(1) ?? "";
+  return roles.some((item) => item.id === hash) ? (hash as Role) : null;
+}
+
+type HomeCardProps = {
+  role: Role;
+  title: string;
+  label: string;
+  description: string;
+  status: string;
+  icon: LucideIcon;
+  operations?: boolean;
+  open: (role: Role) => void;
+};
+
+function HomeCard({
+  role,
+  title,
+  label,
+  description,
+  status,
+  icon: Icon,
+  operations = false,
+  open,
+}: HomeCardProps) {
+  return (
+    <article
+      className={`home-role-card ${operations ? "home-role-card-operations" : ""}`}
+    >
+      <div className="home-card-topline">
+        <span className="home-card-icon">
+          <Icon size={20} strokeWidth={1.8} />
+        </span>
+        <span className="eyebrow">{label}</span>
+      </div>
+      <h2>{title}</h2>
+      <p className="home-card-description">{description}</p>
+      <div className="home-card-footer">
+        <p className="home-card-status">
+          <span className="live-dot" /> {status}
+        </p>
+        <button
+          className={`button ${operations ? "primary" : "secondary"} home-card-action`}
+          aria-label={`Open ${title}`}
+          onClick={() => open(role)}
+        >
+          Open <ArrowRight size={14} />
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function HomeScreen({
+  state,
+  openRole,
+}: {
+  state: OperationsState;
+  openRole: (role: Role) => void;
+}) {
+  const availableDonorUnits = state.batches.reduce((total, batch) => {
+    if (batch.unavailable || batch.safeUntil <= state.now) return total;
+    return total + Math.max(0, batchTotals(state, batch.id).available);
+  }, 0);
+  const onlineRiders = state.riders.filter((rider) => rider.online).length;
+  const availableRiders = state.riders.filter(
+    (rider) => rider.online && rider.available,
+  ).length;
+  const openReceivers = state.receivers.filter(
+    (receiver) => receiver.isOpen,
+  ).length;
+  const outstandingDemand = state.receivers.reduce(
+    (total, receiver) =>
+      total +
+      Object.values(receiver.demand).reduce((sum, value) => sum + value, 0),
+    0,
+  );
+  const activeReservations = state.reservations.filter((reservation) =>
+    ACTIVE_RESERVATIONS.includes(reservation.status),
+  ).length;
+  const activeShipments = state.shipments.filter(
+    (shipment) =>
+      shipment.quantity > shipment.deliveredQuantity &&
+      shipment.status !== "EXPIRED",
+  ).length;
+  const attention =
+    state.shipments.filter(
+      (shipment) =>
+        shipment.status === "RECOVERY_REQUIRED" ||
+        shipment.status === "REROUTE_REQUIRED" ||
+        shipment.status === "EXPIRED",
+    ).length +
+    state.reservations.filter(
+      (reservation) => reservation.status === "WARNING_INACTIVE",
+    ).length;
+
+  return (
+    <section className="home-screen" aria-labelledby="home-title">
+      <header className="home-intro">
+        <div>
+          <div className="eyebrow">
+            <span className="live-dot" /> LIVE RELAY{" "}
+            <span className="eyebrow-divider">/</span> DEMO NETWORK
+          </div>
+          <h1 id="home-title" className="home-title">
+            Choose the next good handoff
+            <span className="heading-period">.</span>
+          </h1>
+          <p className="home-description">
+            Four desks, one state-backed relay. Open the view that matches the
+            work in front of you.
+          </p>
+        </div>
+        <div className="home-snapshot" aria-label="Live snapshot">
+          <span className="eyebrow">LIVE SNAPSHOT</span>
+          <strong>{formatTime(state.now)} IST</strong>
+          <span>Simulation time · snapshot {state.version}</span>
+        </div>
+      </header>
+      <div className="home-role-grid">
+        <HomeCard
+          role="donor"
+          title="Donor"
+          label="SUPPLY DESK"
+          description="Post what is ready, keep the safety window visible, and follow every unit to handoff."
+          status={`${availableDonorUnits} units ready · ${state.donors.length} stations`}
+          icon={PackagePlus}
+          open={openRole}
+        />
+        <HomeCard
+          role="rider"
+          title="Rider"
+          label="FIELD DESK"
+          description="Accept a safe route, confirm physical custody, and keep the relay moving with progress updates."
+          status={`${onlineRiders}/${state.riders.length} online · ${availableRiders} available`}
+          icon={Bike}
+          open={openRole}
+        />
+        <HomeCard
+          role="receiver"
+          title="Receiving Point"
+          label="RECEIVING DESK"
+          description="Keep demand, storage, opening status, and receiving facilities honest for every arrival."
+          status={`${openReceivers}/${state.receivers.length} open · ${outstandingDemand} units requested`}
+          icon={Warehouse}
+          open={openRole}
+        />
+        <HomeCard
+          role="operations"
+          title="Operations Centre"
+          label="CONTROL DESK"
+          description="Dispatch, pressure-test constraints, and inspect the live custody trail across the network."
+          status={`${activeReservations + activeShipments} active relays · ${attention} need attention`}
+          icon={LayoutDashboard}
+          operations
+          open={openRole}
+        />
+      </div>
+      <div className="home-note">
+        <ShieldCheck size={16} />
+        <span>Every card reads from the shared simulation state.</span>
+      </div>
+    </section>
+  );
+}
 
 function isKnownStaticHost(): boolean {
   const hostname = globalThis.location?.hostname ?? "";
@@ -50,11 +221,7 @@ function isKnownStaticHost(): boolean {
 
 export default function App() {
   const [state, setState] = useState<OperationsState | null>(null);
-  const [role, setRole] = useState<Role>(() =>
-    roles.some((r) => r.id === location.hash.slice(1))
-      ? (location.hash.slice(1) as Role)
-      : "operations",
-  );
+  const [role, setRole] = useState<AppRoute>(routeFromHash);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [connected, setConnected] = useState(false);
@@ -175,8 +342,7 @@ export default function App() {
   }, [toast]);
   useEffect(() => {
     const listener = () => {
-      const match = roles.find((r) => r.id === location.hash.slice(1));
-      if (match) setRole(match.id);
+      setRole(routeFromHash());
     };
     addEventListener("hashchange", listener);
     return () => removeEventListener("hashchange", listener);
@@ -267,6 +433,12 @@ export default function App() {
     location.hash = value;
     window.scrollTo({ top: 0 });
   };
+  const goHome = () => {
+    setRole(null);
+    if (location.hash)
+      history.pushState({}, "", `${location.pathname}${location.search}`);
+    window.scrollTo({ top: 0 });
+  };
   const exportTimeline = () => {
     if (!state) return;
     const blob = new Blob(
@@ -292,106 +464,169 @@ export default function App() {
     ).length ?? 0;
   const memoryOnlyDemo = localDemo && demoPersistence === "memory-only";
 
+  const isHome = role === null;
+
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <a
-          className="brand"
-          href="#operations"
-          aria-label="RelaySafe operations"
-          onClick={() => changeRole("operations")}
-        >
-          <span className="brand-mark">
-            <HeartHandshake size={22} strokeWidth={1.8} />
-          </span>
-          <span>
-            Relay<span>Safe</span>
-          </span>
-        </a>
-        <p className="sidebar-label">THE EVENING RELAY</p>
-        <nav aria-label="Role views">
-          {roles.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item ${role === item.id ? "active" : ""}`}
-              aria-current={role === item.id ? "page" : undefined}
-              onClick={() => changeRole(item.id)}
-            >
-              <item.icon size={17} />
-              {item.label}
-              {item.id === "operations" && exceptions > 0 && (
-                <span className="nav-count">{exceptions}</span>
-              )}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-divider" />
-        <button className="nav-item" onClick={() => setGuide(true)}>
-          <BookOpen size={17} />
-          Judge’s field guide
-          <ArrowRight size={13} style={{ marginLeft: "auto" }} />
-        </button>
-        <button className="nav-item" onClick={exportTimeline} disabled={!state}>
-          <ArrowDownToLine size={17} />
-          Export decision trail
-        </button>
-        <div className="sidebar-footer">
-          <div className="sidebar-status">
-            <strong>
-              <span
-                className={`live-dot ${connected && !memoryOnlyDemo ? "" : "offline"}`}
-              />{" "}
+    <div className={`app-shell ${isHome ? "home-shell" : ""}`}>
+      {!isHome && (
+        <aside className="sidebar">
+          <a
+            className="brand"
+            href="#operations"
+            aria-label="RelaySafe operations"
+            onClick={() => changeRole("operations")}
+          >
+            <span className="brand-mark">
+              <HeartHandshake size={22} strokeWidth={1.8} />
+            </span>
+            <span>
+              Relay<span>Safe</span>
+            </span>
+          </a>
+          <p className="sidebar-label">THE EVENING RELAY</p>
+          <nav aria-label="Role views">
+            {roles.map((item) => (
+              <button
+                key={item.id}
+                className={`nav-item ${role === item.id ? "active" : ""}`}
+                aria-current={role === item.id ? "page" : undefined}
+                onClick={() => changeRole(item.id)}
+              >
+                <item.icon size={17} />
+                {item.label}
+                {item.id === "operations" && exceptions > 0 && (
+                  <span className="nav-count">{exceptions}</span>
+                )}
+              </button>
+            ))}
+          </nav>
+          <div className="sidebar-divider" />
+          <button className="nav-item" onClick={() => setGuide(true)}>
+            <BookOpen size={17} />
+            Judge’s field guide
+            <ArrowRight size={13} style={{ marginLeft: "auto" }} />
+          </button>
+          <button
+            className="nav-item"
+            onClick={exportTimeline}
+            disabled={!state}
+          >
+            <ArrowDownToLine size={17} />
+            Export decision trail
+          </button>
+          <div className="sidebar-footer">
+            <div className="sidebar-status">
+              <strong>
+                <span
+                  className={`live-dot ${connected && !memoryOnlyDemo ? "" : "offline"}`}
+                />{" "}
+                {localDemo
+                  ? memoryOnlyDemo
+                    ? "Memory-only demo"
+                    : "Browser-local demo"
+                  : connected
+                    ? "Shared state connected"
+                    : "Reconnecting"}
+              </strong>
               {localDemo
                 ? memoryOnlyDemo
-                  ? "Memory-only demo"
-                  : "Browser-local demo"
-                : connected
-                  ? "Shared state connected"
-                  : "Reconnecting"}
-            </strong>
-            {localDemo
-              ? memoryOnlyDemo
-                ? "Browser storage is unavailable; changes last until reload."
-                : "Saved in this browser, not a shared backend."
-              : "One network. Every role in sync."}
-          </div>
-          <p>
-            Keep good moving.
-            <br />
-            Keep every handoff accountable.
-          </p>
-          <div className="sidebar-user">
-            <span className="avatar">RS</span>
-            <div>
-              <strong>Bengaluru pilot</strong>
-              <p>Local simulation · no login</p>
+                  ? "Browser storage is unavailable; changes last until reload."
+                  : "Saved in this browser, not a shared backend."
+                : "One network. Every role in sync."}
+            </div>
+            <p>
+              Keep good moving.
+              <br />
+              Keep every handoff accountable.
+            </p>
+            <div className="sidebar-user">
+              <span className="avatar">RS</span>
+              <div>
+                <strong>Bengaluru pilot</strong>
+                <p>Local simulation · no login</p>
+              </div>
             </div>
           </div>
-        </div>
-      </aside>
+        </aside>
+      )}
       <main className="main-content" id="main">
-        <header className="topbar">
-          <div className="topbar-left">
-            <span className="workspace-name">Bengaluru relief network</span>
-            <span className="topbar-separator">/</span>
-            <span>{roles.find((r) => r.id === role)?.label}</span>
-          </div>
-          <div className="topbar-right">
-            <span className="clock-display">
-              <Clock3 size={14} />
-              {state ? formatTime(state.now) : "—"}{" "}
-              <small>IST · simulated</small>
-            </span>
-            <button
-              className="button small secondary reset-button"
-              disabled={busy || !state}
-              onClick={() => setReset(true)}
+        {isHome ? (
+          <header className="topbar home-topbar">
+            <a
+              className="brand home-brand"
+              href="/"
+              aria-label="RelaySafe home"
+              onClick={(event) => {
+                event.preventDefault();
+                goHome();
+              }}
             >
-              <RotateCcw size={12} />
-              Reset demo
-            </button>
-          </div>
-        </header>
+              <span className="brand-mark">
+                <HeartHandshake size={20} strokeWidth={1.8} />
+              </span>
+              <span>
+                Relay<span>Safe</span>
+              </span>
+            </a>
+            <div className="home-topbar-right">
+              <nav className="home-role-nav" aria-label="Role consoles">
+                {roles.map((item) => (
+                  <a
+                    key={item.id}
+                    href={`#${item.id}`}
+                    aria-label={`Open ${item.label}`}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      changeRole(item.id);
+                    }}
+                  >
+                    {item.id === "operations"
+                      ? "Ops"
+                      : item.id === "receiver"
+                        ? "Receiver"
+                        : item.label.split(" ")[0]}
+                  </a>
+                ))}
+              </nav>
+              <span className="clock-display">
+                <Clock3 size={14} />
+                {state ? formatTime(state.now) : "—"}{" "}
+                <small>IST · simulated</small>
+              </span>
+              <button
+                className="button small secondary reset-button"
+                disabled={busy || !state}
+                onClick={() => setReset(true)}
+              >
+                <RotateCcw size={12} />
+                Reset demo
+              </button>
+            </div>
+          </header>
+        ) : (
+          <header className="topbar">
+            <div className="topbar-left">
+              <span className="workspace-name">Bengaluru relief network</span>
+              <span className="topbar-separator">/</span>
+              <span>{roles.find((r) => r.id === role)?.label}</span>
+            </div>
+            <div className="topbar-right">
+              <span className="clock-display">
+                <Clock3 size={14} />
+                {state ? formatTime(state.now) : "—"}{" "}
+                <small>IST · simulated</small>
+              </span>
+              <button
+                className="button small secondary reset-button"
+                disabled={busy || !state}
+                onClick={() => setReset(true)}
+              >
+                <RotateCcw size={12} />
+                Reset demo
+              </button>
+            </div>
+          </header>
+        )}
         {localDemo && (
           <div className="connection-banner" role="status">
             <ShieldCheck size={15} />
@@ -420,38 +655,42 @@ export default function App() {
             )}
           </div>
         )}
-        <div className="page-content">
+        <div className={`page-content ${isHome ? "home-page-content" : ""}`}>
           {state ? (
-            <>
-              {role === "operations" && (
-                <OperationsDashboard
-                  state={state}
-                  act={act}
-                  busy={busy || !connected}
-                />
-              )}
-              {role === "donor" && (
-                <DonorConsole
-                  state={state}
-                  act={act}
-                  busy={busy || !connected}
-                />
-              )}
-              {role === "rider" && (
-                <RiderConsole
-                  state={state}
-                  act={act}
-                  busy={busy || !connected}
-                />
-              )}
-              {role === "receiver" && (
-                <ReceiverConsole
-                  state={state}
-                  act={act}
-                  busy={busy || !connected}
-                />
-              )}
-            </>
+            isHome ? (
+              <HomeScreen state={state} openRole={changeRole} />
+            ) : (
+              <>
+                {role === "operations" && (
+                  <OperationsDashboard
+                    state={state}
+                    act={act}
+                    busy={busy || !connected}
+                  />
+                )}
+                {role === "donor" && (
+                  <DonorConsole
+                    state={state}
+                    act={act}
+                    busy={busy || !connected}
+                  />
+                )}
+                {role === "rider" && (
+                  <RiderConsole
+                    state={state}
+                    act={act}
+                    busy={busy || !connected}
+                  />
+                )}
+                {role === "receiver" && (
+                  <ReceiverConsole
+                    state={state}
+                    act={act}
+                    busy={busy || !connected}
+                  />
+                )}
+              </>
+            )
           ) : (
             <div className="app-loading">
               <ShieldCheck size={36} />

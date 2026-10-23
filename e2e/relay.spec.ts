@@ -11,6 +11,49 @@ test.beforeEach(async ({ request }) => {
   await command(request, { type: "RESET" });
 });
 
+test("root home presents live role cards and opens each console", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Choose the next good handoff." }),
+  ).toBeVisible();
+  await expect(page.locator(".home-role-card")).toHaveCount(4);
+  await expect(page.getByText("220 units ready · 2 stations")).toBeVisible();
+  await expect(page.getByText("5/6 online · 5 available")).toBeVisible();
+  await expect(page.getByText("5/5 open · 360 units requested")).toBeVisible();
+  await expect(
+    page.getByText("0 active relays · 0 need attention"),
+  ).toBeVisible();
+  for (const title of [
+    "Donor",
+    "Rider",
+    "Receiving Point",
+    "Operations Centre",
+  ])
+    await expect(
+      page.getByRole("button", { name: `Open ${title}` }),
+    ).toBeVisible();
+
+  await page.getByRole("button", { name: "Open Operations Centre" }).click();
+  await expect(page).toHaveURL(/#operations$/);
+  await expect(
+    page.getByRole("heading", { name: "Every relay counts." }),
+  ).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto("/");
+  const cardTops = await page
+    .locator(".home-role-card")
+    .evaluateAll((cards) =>
+      cards.map((card) => Math.round(card.getBoundingClientRect().top)),
+    );
+  expect(
+    cardTops.every((top, index) => index === 0 || top > cardTops[index - 1]),
+  ).toBe(true);
+});
+
 test("desktop operations renders honest zero state and creates real split allocations", async ({
   page,
   request,
@@ -18,7 +61,7 @@ test("desktop operations renders honest zero state and creates real split alloca
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/");
+  await page.goto("/#operations");
   await expect(
     page.getByRole("heading", { name: "Every relay counts." }),
   ).toBeVisible();
@@ -40,7 +83,7 @@ test("desktop operations renders honest zero state and creates real split alloca
 test("judge can demonstrate a ghost lease warning, release, and replacement from the UI", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#operations");
   await page.getByRole("button", { name: "Auto-dispatch network" }).click();
   for (let i = 0; i < 3; i++)
     await page.getByRole("button", { name: "+1 minute", exact: true }).click();
@@ -106,7 +149,13 @@ test("pickup, in-transit closure, reroute and receipt work through real controls
   await page
     .getByLabel("Receiving point", { exact: true })
     .selectOption("receiver-2");
-  await page.getByLabel("Open for receiving", { exact: true }).uncheck();
+  const openForReceiving = page.getByLabel("Receiver open status", {
+    exact: true,
+  });
+  await expect(openForReceiving).toBeChecked();
+  await expect(openForReceiving).toBeEnabled();
+  await openForReceiving.click();
+  await expect(openForReceiving).not.toBeChecked();
   let latest = await (await request.get("/api/state")).json();
   const shipment = latest.shipments[0];
   expect(shipment.receiverId).not.toBe("receiver-2");
@@ -138,7 +187,7 @@ test("donor can post a batch and a second role sees the shared result", async ({
   await page.getByRole("button", { name: "Post batch", exact: false }).click();
   await expect(page.getByText("Batch posted.", { exact: true })).toBeVisible();
   const second = await context.newPage();
-  await second.goto("/");
+  await second.goto("/#operations");
   await expect(
     second.getByText("27 units donated", { exact: false }),
   ).toBeVisible();

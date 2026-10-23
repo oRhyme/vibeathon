@@ -52,6 +52,16 @@ Render serves the built React app and the Express API from one origin. It inject
 
 For a persistent production deployment, replace the local JSON snapshot with durable storage and add authentication before exposing real operational data. This repository is still a public-demo prototype with no login or authorization.
 
+#### Current live demo
+
+The current shared Render deployment is:
+
+```text
+https://vibeathon-dkx4.onrender.com/
+```
+
+Use `/health` for the deployment check. The public demo is still a simulated, unauthenticated network; do not enter real beneficiary, medical, or contact data.
+
 Requires Node.js 22.12+ and npm. From the repository root:
 
 ```sh
@@ -59,7 +69,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://localhost:5173**. The same server hosts the React app and operations API. Switch roles in the sidebar; open a second browser tab to see changes propagate (polling every 1.8 seconds). There is no separate backend to start.
+Open **http://localhost:5173**. The root screen is a four-card home with live Donor, Rider, Receiving Point, and Operations Centre status. Open **Operations Centre** for the full dispatch desk. Role consoles remain available at `/#donor`, `/#rider`, and `/#receiver`; open a second browser tab to see shared changes propagate (polling every 1.8 seconds). There is no separate backend to start.
 
 For a production asset build:
 
@@ -130,7 +140,7 @@ npm run build
 npm run format:check
 ```
 
-The current Phase 0 baseline has **97 passing tests** (87 domain, 7 API, 3 browser-demo persistence/error cases). A production smoke check also starts `npm start` on a supplied `PORT` and confirms `/health` returns JSON with a boot ID.
+The current verified baseline has **97 passing unit/API/browser-demo tests** (87 domain, 7 API, 3 browser-demo persistence/error cases) plus **9 passing Playwright browser tests**. A production smoke check also starts `npm start` on a supplied `PORT` and confirms `/health` returns JSON with a boot ID.
 
 Phase 1 production preflight can be reproduced locally with:
 
@@ -151,7 +161,7 @@ npx playwright install --with-deps chromium
 npm run test:e2e
 ```
 
-On minimal Linux images, the browser needs system libraries in addition to the downloaded browser. `npx playwright install-deps chromium` installs them. Browser screenshots and failure traces are written under ignored `test-results/`. The suite checks the actual UI, including split allocations, lease timeout, donor creation across tabs, receiver incompatibility, pickup/reroute/delivery, and responsive overflow at 1440, 768, and 390 pixels.
+On minimal Linux images, the browser needs system libraries in addition to the downloaded browser. `npx playwright install-deps chromium` installs them. Browser screenshots and failure traces are written under ignored `test-results/`. The suite checks the four-card home and navigation, split allocations, lease timeout, donor creation across tabs, receiver incompatibility, pickup/reroute/delivery, and responsive overflow at 1440, 768, and 390 pixels.
 
 ## Architecture and files
 

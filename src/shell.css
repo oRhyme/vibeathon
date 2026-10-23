@@ -575,3 +575,397 @@ textarea.input {
     flex-wrap: wrap;
   }
 }
+
+.home-shell {
+  display: block;
+  min-height: 100vh;
+}
+
+.home-shell .main-content {
+  grid-column: auto;
+}
+
+.home-topbar {
+  min-height: 66px;
+  height: auto;
+  padding: 0 48px;
+}
+
+.home-brand {
+  margin: 0;
+  padding: 0;
+  gap: 9px;
+}
+
+.home-brand .brand-mark {
+  width: 31px;
+  height: 32px;
+}
+
+.home-topbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 17px;
+  min-width: 0;
+}
+
+.home-role-nav {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: #73806c;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.home-role-nav a {
+  padding: 5px 0;
+  border-bottom: 1px solid transparent;
+}
+
+.home-role-nav a:hover {
+  color: var(--forest);
+  border-bottom-color: #a9bb8e;
+}
+
+.home-page-content {
+  max-width: 1250px;
+  padding: 62px 48px 26px;
+}
+
+.home-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 29px;
+}
+
+.home-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 35px;
+}
+
+.home-title {
+  max-width: 760px;
+  margin-top: 13px;
+  color: var(--forest);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(42px, 5vw, 67px);
+  font-weight: 400;
+  letter-spacing: -2.5px;
+  line-height: 1.04;
+}
+
+.home-description {
+  max-width: 540px;
+  margin-top: 15px;
+  color: #77816f;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.home-snapshot {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 165px;
+  padding: 14px 0 3px 19px;
+  border-left: 1px solid #d0d9c4;
+  color: #8a9580;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.home-snapshot strong {
+  color: var(--forest);
+  font-size: 22px;
+  font-weight: 550;
+  letter-spacing: -0.6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-role-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.home-role-card {
+  display: flex;
+  min-height: 242px;
+  flex-direction: column;
+  padding: 26px 28px 24px;
+  background: #fbfbf4;
+  border: 1px solid #dce1d2;
+  border-radius: 8px;
+  color: var(--forest);
+  box-shadow: 0 4px 16px #173f3808;
+}
+
+.home-role-card:hover {
+  border-color: #b7c99f;
+  box-shadow: 0 8px 25px #173f3810;
+}
+
+.home-card-topline {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.home-card-icon {
+  display: grid;
+  width: 39px;
+  height: 39px;
+  place-items: center;
+  border-radius: 8px 3px 8px 3px;
+  background: #e6edd8;
+  color: #5b7749;
+}
+
+.home-role-card .eyebrow {
+  color: #7e8c70;
+}
+
+.home-role-card h2 {
+  margin-top: 22px;
+  color: var(--forest);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: -1px;
+  line-height: 1.15;
+}
+
+.home-card-description {
+  max-width: 460px;
+  margin-top: 10px;
+  color: #77816f;
+  font-size: 11px;
+  line-height: 1.75;
+}
+
+.home-card-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: auto;
+  padding-top: 24px;
+}
+
+.home-card-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: #5e744e;
+  font-size: 10px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-card-status .live-dot {
+  width: 6px;
+  height: 6px;
+}
+
+.home-card-action {
+  min-width: 77px;
+}
+
+.home-role-card-operations {
+  background: var(--forest);
+  border-color: var(--forest);
+  box-shadow: 0 10px 30px #173f3824;
+}
+
+.home-role-card-operations:hover {
+  border-color: #28594e;
+  box-shadow: 0 13px 34px #173f3830;
+}
+
+.home-role-card-operations .home-card-icon {
+  background: #315c4c;
+  color: var(--lime);
+}
+
+.home-role-card-operations .eyebrow,
+.home-role-card-operations h2 {
+  color: #f1f5e8;
+}
+
+.home-role-card-operations .home-card-description {
+  color: #b6c8ad;
+}
+
+.home-role-card-operations .home-card-status {
+  color: #d8e7c1;
+}
+
+.home-role-card-operations .home-card-status .live-dot {
+  background: var(--lime);
+  box-shadow: 0 0 0 3px #d4ef9120;
+}
+
+.home-role-card-operations .home-card-action {
+  background: var(--lime);
+  border-color: var(--lime);
+  color: var(--forest);
+}
+
+.home-role-card-operations .home-card-action:hover:not(:disabled) {
+  background: #e0f4ad;
+}
+
+.home-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #899681;
+  font-size: 10px;
+}
+
+.home-note svg {
+  color: #749159;
+}
+
+@media (max-width: 1000px) {
+  .home-topbar {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .home-role-nav {
+    gap: 9px;
+  }
+
+  .home-page-content {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .home-intro {
+    align-items: flex-start;
+  }
+
+  .home-title {
+    font-size: 52px;
+  }
+}
+
+@media (max-width: 800px) {
+  .home-role-nav {
+    display: none;
+  }
+
+  .home-intro {
+    display: block;
+  }
+
+  .home-snapshot {
+    display: inline-flex;
+    min-width: 0;
+    margin-top: 25px;
+    padding: 10px 0 0;
+    border-top: 1px solid #d0d9c4;
+    border-left: 0;
+  }
+
+  .home-snapshot strong {
+    font-size: 19px;
+  }
+}
+
+@media (max-width: 700px) {
+  .home-topbar {
+    min-height: 58px;
+    padding: 12px 20px;
+  }
+
+  .home-brand {
+    font-size: 20px;
+  }
+
+  .home-brand .brand-mark {
+    width: 29px;
+    height: 30px;
+  }
+
+  .home-topbar-right {
+    gap: 8px;
+  }
+
+  .home-topbar .clock-display small {
+    display: none;
+  }
+
+  .home-topbar .clock-display {
+    gap: 5px;
+    font-size: 10px;
+  }
+
+  .home-topbar .reset-button {
+    font-size: 9px !important;
+    padding: 6px 8px;
+  }
+
+  .home-page-content {
+    padding: 34px 20px 20px;
+  }
+
+  .home-screen {
+    gap: 24px;
+  }
+
+  .home-title {
+    font-size: 40px;
+    letter-spacing: -1.8px;
+  }
+
+  .home-description {
+    max-width: 330px;
+    font-size: 11px;
+    line-height: 1.65;
+  }
+
+  .home-role-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .home-role-card {
+    min-height: 210px;
+    padding: 21px 20px 19px;
+  }
+
+  .home-role-card h2 {
+    margin-top: 18px;
+    font-size: 27px;
+  }
+
+  .home-card-description {
+    font-size: 10px;
+  }
+
+  .home-card-footer {
+    align-items: center;
+    padding-top: 21px;
+  }
+
+  .home-card-status {
+    font-size: 9px;
+  }
+
+  .home-card-action {
+    min-width: 69px;
+    min-height: 33px;
+    font-size: 10px !important;
+  }
+
+  .home-note {
+    font-size: 9px;
+  }
+}
