@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import OperationsDashboard from "./components/OperationsDashboard";
+import { browserAction, readBrowserState } from "./browserDemo";
 import {
   DonorConsole,
   ReceiverConsole,
@@ -47,6 +48,9 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [connected, setConnected] = useState(false);
+  const [localDemo, setLocalDemo] = useState(false);
+  const demoRef = useRef(false);
+  const serverSeen = useRef(false);
   const [toast, setToast] = useState<{
     ok: boolean;
     code: string;
@@ -64,6 +68,10 @@ export default function App() {
   );
   const refresh = useCallback(async () => {
     try {
+      if (demoRef.current) {
+        merge(readBrowserState());
+        return;
+      }
       const response = await fetch("/api/state", {
         cache: "no-store",
         signal: AbortSignal.timeout(5000),
@@ -71,9 +79,21 @@ export default function App() {
       if (!response.ok)
         throw new Error("The operations server is not responding.");
       merge((await response.json()) as OperationsState);
+      serverSeen.current = true;
       setConnected(true);
       setLoadError("");
     } catch {
+      // A static Vercel/Vite host has no Express API. Never switch after a server session began.
+      if (!serverSeen.current) {
+        try {
+          merge(readBrowserState());
+          demoRef.current = true;
+          setLocalDemo(true);
+          setConnected(true);
+          setLoadError("");
+          return;
+        } catch { /* Keep an explicit failure if browser storage is unavailable. */ }
+      }
       setConnected(false);
       setLoadError(
         "Unable to reach the shared operations server. Your last snapshot is preserved; do not assume a command completed.",
@@ -105,7 +125,7 @@ export default function App() {
       busyRef.current = true;
       setBusy(true);
       try {
-        const response = await fetch("/api/actions", {
+        const response = demoRef.current ? null : await fetch("/api/actions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -116,7 +136,7 @@ export default function App() {
           body: JSON.stringify(action),
           signal: AbortSignal.timeout(15000),
         });
-        const result = (await response.json()) as ActionResult;
+        const result = demoRef.current ? await browserAction(action) : (await response!.json()) as ActionResult;
         if (result.state) merge(result.state);
         setToast({ ok: result.ok, code: result.code, message: result.message });
         if (!result.ok) {

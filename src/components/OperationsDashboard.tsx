@@ -405,7 +405,7 @@ export default function OperationsDashboard({
                     />
                     <text
                       x={p.x + (i === 2 ? -14 : 14)}
-                      y={p.y + (i === 2 ? 28 : -10)}
+                      y={p.y + (i === 2 ? -30 : -10)}
                       textAnchor={i === 2 ? "end" : "start"}
                       className="map-node-label"
                     >
@@ -413,7 +413,7 @@ export default function OperationsDashboard({
                     </text>
                     <text
                       x={p.x + (i === 2 ? -14 : 14)}
-                      y={p.y + (i === 2 ? 42 : 3)}
+                      y={p.y + (i === 2 ? -16 : 3)}
                       textAnchor={i === 2 ? "end" : "start"}
                       className="map-node-detail"
                     >

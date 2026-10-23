@@ -59,12 +59,14 @@ test("judge can demonstrate a ghost lease warning, release, and replacement from
   await page.getByLabel("Online", { exact: true }).click();
   await expect(page.getByLabel("Online", { exact: true })).toBeChecked();
   await page.getByLabel("Available for assignments", { exact: true }).click();
-  await expect(page.getByLabel("Available for assignments", { exact: true })).toBeChecked();
+  await expect(
+    page.getByLabel("Available for assignments", { exact: true }),
+  ).toBeChecked();
   await page
     .getByRole("button", { name: "Operations control", exact: true })
     .click();
   await page.getByRole("button", { name: "Auto-dispatch network" }).click();
-  await expect(page.getByText("Fatima").first()).toBeVisible();
+  await expect(page.locator(".ledger-title").filter({ hasText: "Fatima" }).first()).toBeVisible();
 });
 
 test("pickup, in-transit closure, reroute and receipt work through real controls", async ({

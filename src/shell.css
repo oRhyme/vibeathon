@@ -498,13 +498,38 @@ textarea.input {
   .connection-banner {
     padding: 12px 20px;
   }
-  .app-shell { grid-template-columns: minmax(0, 1fr); }
-  .sidebar, .sidebar nav, .main-content { min-width: 0; }
-  .sidebar nav { max-width: 100%; }
-  .dashboard-heading { flex-direction: column; }
-  .dashboard-heading > div { width: 100%; min-width: 0; }
-  .dashboard-heading .dispatch-button { font-size: 12px; width: 100%; margin-top: 8px; }
-  .dashboard-heading .dispatch-button svg:last-child { display: block; margin-left: auto; }
-  .network-svg { width: 100%; margin-left: 0; }
-  .simulation-clock-actions { flex-wrap: wrap; }
+  .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sidebar,
+  .sidebar nav,
+  .main-content {
+    min-width: 0;
+  }
+  .sidebar nav {
+    max-width: 100%;
+  }
+  .dashboard-heading {
+    flex-direction: column;
+  }
+  .dashboard-heading > div {
+    width: 100%;
+    min-width: 0;
+  }
+  .dashboard-heading .dispatch-button {
+    font-size: 12px;
+    width: 100%;
+    margin-top: 8px;
+  }
+  .dashboard-heading .dispatch-button svg:last-child {
+    display: block;
+    margin-left: auto;
+  }
+  .network-svg {
+    width: 100%;
+    margin-left: 0;
+  }
+  .simulation-clock-actions {
+    flex-wrap: wrap;
+  }
 }
