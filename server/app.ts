@@ -1,4 +1,5 @@
 import express from "express";
+import { randomUUID } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -64,15 +65,22 @@ export function fileStore(path: string): Store {
 
 export function createApplication(store?: Store) {
   let snapshot = store?.read() ?? { state: createSeed(), receipts: [] };
+  const bootId = randomUUID();
   const app = express();
   app.disable("x-powered-by");
   app.use("/api", (_req, res, next) => {
     res.set("Cache-Control", "no-store");
+    res.set("X-RelaySafe-Boot-Id", bootId);
     next();
   });
   app.use(express.json({ limit: "16kb", strict: true }));
+  app.get("/health", (_req, res) =>
+    res
+      .set("X-RelaySafe-Boot-Id", bootId)
+      .json({ ok: true, app: "RelaySafe", bootId }),
+  );
   app.get("/api/health", (_req, res) =>
-    res.json({ ok: true, app: "RelaySafe" }),
+    res.json({ ok: true, app: "RelaySafe", bootId }),
   );
   app.get("/api/state", (_req, res) => res.json(snapshot.state));
   app.post("/api/actions", (req, res) => {

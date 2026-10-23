@@ -6,9 +6,22 @@ A working, deterministic prototype for the Vibe-A-Thon perishable-aid micro-logi
 
 ## Start
 
-### Deploy quickly to Vercel
+### Deploy quickly to Vercel (browser-local demo)
 
-Import this repo, use the Vite preset (build `npm run build`, output `dist`), and deploy. `vercel.json` sets these defaults. If no operations API exists, the UI explicitly enters **browser-local demo mode**: it uses the same rules engine and persists to browser storage. This supports judging on static hosting, but is not a shared backend or cross-device synchronization. The local Express mode below remains the full shared-state implementation.
+Import this repo, use the Vite preset (build `npm run build`, output `dist`), and deploy. `vercel.json` sets these defaults. On a known Vercel host, the UI enters clearly labelled **browser-local demo mode** because static hosting cannot answer `/api/state`; it uses the same rules engine and persists to browser storage. On another host, browser-local mode requires an explicit user choice. This supports static judging, but is not a shared backend or cross-device synchronization. The local and Render Express modes below remain the full shared-state implementation.
+
+### Deploy to Render (shared server)
+
+Use a **Node Web Service**, not a Static Site. `render.yaml` contains the defaults:
+
+```text
+Build command: npm ci && npm run build
+Start command: npm start
+Health check: /health
+Node: 22
+```
+
+Render serves the built React app and the Express API from one origin. It injects `PORT`; the server binds to `0.0.0.0` and exposes both `/health` and `/api/health`. Free instances can sleep and have an ephemeral filesystem, so an idle/restarted service may return to the seeded demo. The client detects the per-process `X-RelaySafe-Boot-Id`, reloads the new seed snapshot, and shows a reset notice rather than keeping stale state. During a cold start it keeps the last snapshot read-only and retries with backoff; it does not silently switch a shared session into local mode.
 
 Requires Node.js 22.12+ and npm. From the repository root:
 
@@ -26,7 +39,7 @@ npm run build
 npm start
 ```
 
-The demo starts at **21:00 simulated IST**, not the real wall clock. Advance time with the workbench or role clock controls. Leases and freshness change only when simulated time advances; leaving a browser idle does not silently consume the demo.
+`npm start` uses `PORT` when provided and defaults to `5173`. The demo starts at **21:00 simulated IST**, not the real wall clock. Advance time with the workbench or role clock controls. Leases and freshness change only when simulated time advances; leaving a browser idle does not silently consume the demo.
 
 ## Why this is more than a donation board
 
@@ -88,6 +101,8 @@ npm run build
 npm run format:check
 ```
 
+The current Phase 0 baseline has **97 passing tests** (87 domain, 7 API, 3 browser-demo persistence/error cases). A production smoke check also starts `npm start` on a supplied `PORT` and confirms `/health` returns JSON with a boot ID.
+
 Browser suite (isolated server on port 5174, separate local data file):
 
 ```sh
@@ -125,7 +140,7 @@ The local snapshot is `.data/operations.json` (git-ignored). `PORT` changes the 
 - This is a local/LAN judging prototype **without authentication or authorization**. Do not expose it publicly or enter real medical, beneficiary, or contact data. All connected clients can operate every role and reset the scenario.
 - Routes are deterministic coordinate-based simulated ETAs, not GPS or traffic-aware navigation. Bundled cargo has sequential destination ETAs. Fallback recovery moves the full remaining physical shipment; partial splitting of an already-collected shipment is not implemented.
 - Dependency policy is configurable through required capabilities, but it is not professional food-safety, medical, infant-feeding or regulatory certification. Physical handoff is operator-attested, not sensor-verified.
-- No SMS, payments, accounts, AI decision-making, nationwide route optimization, or offline-mobile synchronization. Polling provides shared state while the local server is reachable.
+- No SMS, payments, accounts, AI decision-making, nationwide route optimization, or offline-mobile synchronization. Polling provides shared state while the server is reachable; cold starts are surfaced as read-only with automatic retry.
 - Local JSON persistence is atomic on rename, not multi-process locking or an unlimited append-only audit service. Keep backups for important demonstrations.
 
 ## Visual references

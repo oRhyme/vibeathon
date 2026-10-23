@@ -17,7 +17,12 @@ import {
   X,
 } from "lucide-react";
 import OperationsDashboard from "./components/OperationsDashboard";
-import { browserAction, readBrowserState } from "./browserDemo";
+import {
+  browserAction,
+  getBrowserDemoStatus,
+  readBrowserState,
+  type BrowserDemoPersistence,
+} from "./browserDemo";
 import {
   DonorConsole,
   ReceiverConsole,
@@ -38,6 +43,11 @@ const roles = [
 ] as const;
 type Role = (typeof roles)[number]["id"];
 
+function isKnownStaticHost(): boolean {
+  const hostname = globalThis.location?.hostname ?? "";
+  return hostname === "vercel.app" || hostname.endsWith(".vercel.app");
+}
+
 export default function App() {
   const [state, setState] = useState<OperationsState | null>(null);
   const [role, setRole] = useState<Role>(() =>
@@ -49,8 +59,12 @@ export default function App() {
   const busyRef = useRef(false);
   const [connected, setConnected] = useState(false);
   const [localDemo, setLocalDemo] = useState(false);
+  const [demoPersistence, setDemoPersistence] =
+    useState<BrowserDemoPersistence>("persisted");
   const demoRef = useRef(false);
   const serverSeen = useRef(false);
+  const bootIdRef = useRef<string | null>(null);
+  const refreshInFlight = useRef(false);
   const [toast, setToast] = useState<{
     ok: boolean;
     code: string;
@@ -60,17 +74,31 @@ export default function App() {
   const [reset, setReset] = useState(false);
   const [loadError, setLoadError] = useState("");
   const merge = useCallback(
-    (incoming: OperationsState) =>
+    (incoming: OperationsState, force = false) =>
       setState((current) =>
-        !current || incoming.version >= current.version ? incoming : current,
+        !current || force || incoming.version >= current.version
+          ? incoming
+          : current,
       ),
     [],
   );
-  const refresh = useCallback(async () => {
+  const enterBrowserDemo = useCallback(() => {
+    merge(readBrowserState(), true);
+    demoRef.current = true;
+    setLocalDemo(true);
+    setDemoPersistence(getBrowserDemoStatus().mode);
+    setConnected(true);
+    setLoadError("");
+  }, [merge]);
+  const refresh = useCallback(async (): Promise<boolean> => {
+    if (refreshInFlight.current) return true;
+    refreshInFlight.current = true;
     try {
       if (demoRef.current) {
         merge(readBrowserState());
-        return;
+        setDemoPersistence(getBrowserDemoStatus().mode);
+        setConnected(true);
+        return true;
       }
       const response = await fetch("/api/state", {
         cache: "no-store",
@@ -78,34 +106,67 @@ export default function App() {
       });
       if (!response.ok)
         throw new Error("The operations server is not responding.");
-      merge((await response.json()) as OperationsState);
+      const incomingBootId = response.headers.get("X-RelaySafe-Boot-Id");
+      const serverReset =
+        !!incomingBootId &&
+        !!bootIdRef.current &&
+        incomingBootId !== bootIdRef.current;
+      if (incomingBootId) bootIdRef.current = incomingBootId;
+      merge((await response.json()) as OperationsState, serverReset);
       serverSeen.current = true;
       setConnected(true);
       setLoadError("");
+      if (serverReset) {
+        setToast({
+          ok: false,
+          code: "SERVER_RESET",
+          message:
+            "The shared server restarted and reset the demo to its seed state.",
+        });
+      }
+      return true;
     } catch {
-      // A static Vercel/Vite host has no Express API. Never switch after a server session began.
-      if (!serverSeen.current) {
+      // A known static host has no Express API. Any other host stays read-only
+      // until the shared server responds, including during a Render cold start.
+      if (!serverSeen.current && isKnownStaticHost()) {
         try {
-          merge(readBrowserState());
-          demoRef.current = true;
-          setLocalDemo(true);
-          setConnected(true);
-          setLoadError("");
-          return;
+          enterBrowserDemo();
+          return true;
         } catch {
           /* Keep an explicit failure if browser storage is unavailable. */
         }
       }
       setConnected(false);
       setLoadError(
-        "Unable to reach the shared operations server. Your last snapshot is preserved; do not assume a command completed.",
+        "Waking up the shared operations server. Your last snapshot is read-only; do not assume a command completed.",
       );
+      return false;
+    } finally {
+      refreshInFlight.current = false;
     }
-  }, [merge]);
+  }, [enterBrowserDemo, merge]);
   useEffect(() => {
-    void refresh();
-    const interval = setInterval(() => void refresh(), 1800);
-    return () => clearInterval(interval);
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let failures = 0;
+    const poll = async () => {
+      const ok = await refresh();
+      if (stopped) return;
+      failures = ok ? 0 : failures + 1;
+      const delay = ok
+        ? 1800
+        : Math.min(30000, 1800 * 2 ** Math.min(failures - 1, 4));
+      if (!ok)
+        setLoadError(
+          `Waking up the shared operations server. Automatic retry in ${Math.ceil(delay / 1000)} seconds. Your last snapshot is read-only; do not assume a command completed.`,
+        );
+      timer = setTimeout(() => void poll(), delay);
+    };
+    void poll();
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [refresh]);
   useEffect(() => {
     if (!toast || !toast.ok) return;
@@ -124,27 +185,59 @@ export default function App() {
   const act = useCallback(
     async (action: Action) => {
       if (busyRef.current) throw new Error("Another command is in progress.");
+      if (!demoRef.current && !connected) {
+        const unavailable = new Error(
+          "The shared operations server is unavailable; this view is read-only.",
+        );
+        unavailable.name = "ConnectionUnavailable";
+        setToast({
+          ok: false,
+          code: "SERVER_UNAVAILABLE",
+          message: unavailable.message,
+        });
+        throw unavailable;
+      }
       busyRef.current = true;
       setBusy(true);
       try {
-        const response = demoRef.current
-          ? null
-          : await fetch("/api/actions", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Idempotency-Key":
-                  globalThis.crypto?.randomUUID?.() ??
-                  `command-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              },
-              body: JSON.stringify(action),
-              signal: AbortSignal.timeout(15000),
-            });
-        const result = demoRef.current
-          ? await browserAction(action)
-          : ((await response!.json()) as ActionResult);
-        if (result.state) merge(result.state);
-        setToast({ ok: result.ok, code: result.code, message: result.message });
+        let result: ActionResult;
+        let serverReset = false;
+        if (demoRef.current) {
+          result = await browserAction(action);
+          setDemoPersistence(getBrowserDemoStatus().mode);
+        } else {
+          const response = await fetch("/api/actions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Idempotency-Key":
+                globalThis.crypto?.randomUUID?.() ??
+                `command-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            },
+            body: JSON.stringify(action),
+            signal: AbortSignal.timeout(15000),
+          });
+          const incomingBootId = response.headers.get("X-RelaySafe-Boot-Id");
+          serverReset =
+            !!incomingBootId &&
+            !!bootIdRef.current &&
+            incomingBootId !== bootIdRef.current;
+          if (incomingBootId) bootIdRef.current = incomingBootId;
+          result = (await response.json()) as ActionResult;
+          serverSeen.current = true;
+          setConnected(true);
+          if (result.state) merge(result.state, serverReset);
+        }
+        setToast(
+          serverReset
+            ? {
+                ok: false,
+                code: "SERVER_RESET",
+                message:
+                  "The shared server restarted; this confirmed action was applied to the new seed state.",
+              }
+            : { ok: result.ok, code: result.code, message: result.message },
+        );
         if (!result.ok) {
           const rejection = new Error(result.message);
           rejection.name = "ActionRejected";
@@ -167,7 +260,7 @@ export default function App() {
         setBusy(false);
       }
     },
-    [merge, refresh],
+    [connected, merge, refresh],
   );
   const changeRole = (value: Role) => {
     setRole(value);
@@ -197,6 +290,7 @@ export default function App() {
     state?.shipments.filter(
       (s) => s.status === "RECOVERY_REQUIRED" || s.status === "EXPIRED",
     ).length ?? 0;
+  const memoryOnlyDemo = localDemo && demoPersistence === "memory-only";
 
   return (
     <div className="app-shell">
@@ -244,15 +338,21 @@ export default function App() {
         <div className="sidebar-footer">
           <div className="sidebar-status">
             <strong>
-              <span className={`live-dot ${connected ? "" : "offline"}`} />{" "}
+              <span
+                className={`live-dot ${connected && !memoryOnlyDemo ? "" : "offline"}`}
+              />{" "}
               {localDemo
-                ? "Browser-local demo"
+                ? memoryOnlyDemo
+                  ? "Memory-only demo"
+                  : "Browser-local demo"
                 : connected
                   ? "Shared state connected"
                   : "Reconnecting"}
             </strong>
             {localDemo
-              ? "Saved in this browser, not a shared backend."
+              ? memoryOnlyDemo
+                ? "Browser storage is unavailable; changes last until reload."
+                : "Saved in this browser, not a shared backend."
               : "One network. Every role in sync."}
           </div>
           <p>
@@ -295,15 +395,29 @@ export default function App() {
         {localDemo && (
           <div className="connection-banner" role="status">
             <ShieldCheck size={15} />
-            Static demo mode · actions use the same safety engine and save in
-            this browser. No shared server or cross-device sync.
+            {memoryOnlyDemo
+              ? "Memory-only demo mode · browser storage is unavailable, so changes last until this tab reloads."
+              : "Static demo mode · actions use the same safety engine and save in this browser. No shared server or cross-device sync."}
           </div>
         )}
         {loadError && state && (
           <div className="connection-banner" role="alert">
             <Radio size={15} />
             {loadError}
-            <button onClick={() => void refresh()}>Refresh</button>
+            <button
+              className="button text-button small"
+              onClick={() => void refresh()}
+            >
+              Refresh
+            </button>
+            {!localDemo && !serverSeen.current && (
+              <button
+                className="button secondary small"
+                onClick={enterBrowserDemo}
+              >
+                Use browser-local demo
+              </button>
+            )}
           </div>
         )}
         <div className="page-content">
@@ -348,12 +462,22 @@ export default function App() {
               </h1>
               <p>{loadError || "Loading your shared operations state."}</p>
               {loadError && (
-                <button
-                  className="button primary"
-                  onClick={() => void refresh()}
-                >
-                  Try again
-                </button>
+                <div className="dialog-actions">
+                  <button
+                    className="button primary"
+                    onClick={() => void refresh()}
+                  >
+                    Try again
+                  </button>
+                  {!serverSeen.current && !localDemo && (
+                    <button
+                      className="button secondary"
+                      onClick={enterBrowserDemo}
+                    >
+                      Use browser-local demo
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}

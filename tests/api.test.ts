@@ -49,6 +49,28 @@ afterEach(async () => {
 });
 
 describe("central operations API", () => {
+  it("serves the root deployment health check and preserves API compatibility", async () => {
+    const api = await start();
+    const rootHealth = await fetch(`${api.url}/health`);
+    expect(rootHealth.status).toBe(200);
+    const health = await rootHealth.json();
+    expect(health).toMatchObject({ ok: true, app: "RelaySafe" });
+    expect(health.bootId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(rootHealth.headers.get("X-RelaySafe-Boot-Id")).toBe(health.bootId);
+
+    const apiHealth = await fetch(`${api.url}/api/health`);
+    expect(apiHealth.status).toBe(200);
+    expect(await apiHealth.json()).toEqual({
+      ok: true,
+      app: "RelaySafe",
+      bootId: health.bootId,
+    });
+    const state = await fetch(`${api.url}/api/state`);
+    expect(state.headers.get("X-RelaySafe-Boot-Id")).toBe(health.bootId);
+  });
+
   it("serves identical state to independent role clients and serializes competing claims", async () => {
     const api = await start();
     const create = await api.act({
