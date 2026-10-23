@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, feasibility } from '../src/domain/engine';
 import { createSeed } from '../src/domain/seed';
-import { ACTIVE_RESERVATIONS, batchTotals, type Action, type Capability, type OperationsState } from '../src/domain/types';
+import { ACTIVE_RESERVATIONS, CAPABILITY_LABELS, batchTotals, type Action, type Capability, type OperationsState } from '../src/domain/types';
 
 function act(state: OperationsState, action: Action): OperationsState {
   const result = applyAction(state, action);
@@ -42,7 +42,7 @@ function invariant(state: OperationsState) {
   }
   for (const rider of state.riders) {
     const committed = state.reservations.filter(r => r.riderId === rider.id && ACTIVE_RESERVATIONS.includes(r.status)).reduce((n, r) => n + r.quantity, 0)
-      + state.shipments.filter(s => s.riderId === rider.id).reduce((n, s) => n + s.quantity - s.deliveredQuantity, 0);
+      + state.shipments.filter(s => s.riderId === rider.id || s.recovery?.riderId === rider.id).reduce((n, s) => n + s.quantity - s.deliveredQuantity, 0);
     expect(committed).toBeLessThanOrEqual(rider.capacity);
   }
   for (const s of state.shipments) {
@@ -130,23 +130,24 @@ describe('03 · mandatory aid compatibility', () => {
   it.each(['cleanWater', 'cookingFuel', 'kitchen'] as Capability[])('raw rations always require %s, even with empty custom requirements', capability => {
     const state = createSeed(); const receiver = state.receivers[0];
     state.batches[1].requirements = []; receiver.demand.RAW_RATIONS = 40; receiver.capabilities[capability] = false;
-    expect(feasibility(state, 'batch-2', 'rider-1', receiver.id, 10).code).toBe('INCOMPATIBLE_RECEIVER');
+    expect(feasibility(state, 'batch-2', 'rider-1', receiver.id, 10).code).toBe(({ cleanWater: 'MISSING_CLEAN_WATER', cookingFuel: 'MISSING_COOKING_FUEL', kitchen: 'MISSING_COOKING_FACILITY' } as Partial<Record<Capability, string>>)[capability]);
+    expect(feasibility(state, 'batch-2', 'rider-1', receiver.id, 10).message).toContain(CAPABILITY_LABELS[capability]);
   });
   it('shows the seeded gas incompatibility but permits the community kitchen', () => {
     const state = createSeed();
-    expect(feasibility(state, 'batch-2', 'rider-1', 'receiver-5', 10).message).toContain('cookingFuel');
+    expect(feasibility(state, 'batch-2', 'rider-1', 'receiver-5', 10)).toMatchObject({ code: 'MISSING_COOKING_FUEL', message: expect.stringContaining('Cooking fuel') });
     expect(feasibility(state, 'batch-2', 'rider-1', 'receiver-4', 10).ok).toBe(true);
   });
   it.each(['potableWater', 'servingArea', 'cleanContainers'] as Capability[])('formula requires %s', capability => {
     const state = createSeed(); state.batches[0].aidType = 'INFANT_FORMULA'; state.batches[0].requirements = [];
     state.receivers[0].demand.INFANT_FORMULA = 40; state.receivers[0].capabilities[capability] = false;
-    expect(feasibility(state, 'batch-1', 'rider-1', 'receiver-1', 10).code).toBe('INCOMPATIBLE_RECEIVER');
+    expect(feasibility(state, 'batch-1', 'rider-1', 'receiver-1', 10).code).toBe(({ potableWater: 'MISSING_POTABLE_WATER', servingArea: 'MISSING_SERVING_AREA', cleanContainers: 'MISSING_CLEAN_CONTAINERS' } as Partial<Record<Capability, string>>)[capability]);
   });
   it('medicine requires a medical facility and honors configured refrigeration', () => {
     const state = createSeed(); state.batches[0].aidType = 'MEDICINE'; state.batches[0].requirements = ['medicalRefrigeration']; state.receivers[0].demand.MEDICINE = 40;
     expect(feasibility(state, 'batch-1', 'rider-1', 'receiver-1', 10).ok).toBe(false);
     state.receivers[0].capabilities.medicalFacility = true;
-    expect(feasibility(state, 'batch-1', 'rider-1', 'receiver-1', 10).message).toContain('medicalRefrigeration');
+    expect(feasibility(state, 'batch-1', 'rider-1', 'receiver-1', 10)).toMatchObject({ code: 'MISSING_MEDICAL_REFRIGERATION', message: expect.stringContaining('Medical refrigeration') });
     state.receivers[0].capabilities.medicalRefrigeration = true;
     expect(feasibility(state, 'batch-1', 'rider-1', 'receiver-1', 10).ok).toBe(true);
   });
@@ -456,9 +457,19 @@ describe('12 · physically feasible alternate-rider recovery', () => {
     state = act(state, { type: 'UPDATE_RIDER', riderId: 'rider-6', online: true, available: true });
     state = act(state, { type: 'RECOVER', shipmentId: p.id, riderId: 'rider-6' });
     expect(state.shipments).toHaveLength(1);
-    expect(state.shipments[0]).toMatchObject({ id: p.id, riderId: 'rider-6', quantity: 30, status: 'IN_TRANSIT' });
+    expect(state.shipments[0]).toMatchObject({ id: p.id, riderId: 'rider-1', quantity: 30, status: 'RECOVERY_REQUIRED', recovery: { riderId: 'rider-6' } });
     expect(state.shipments[0].eta).toBeGreaterThanOrEqual(state.now + 6);
     expect(batchTotals(state, 'batch-1')).toEqual(before);
+    expect(applyAction(state, { type: 'CONFIRM_RECOVERY', shipmentId: p.id }).code).toBe('RECOVERY_NOT_REACHED');
+    expect(applyAction(state, { type: 'RECOVER', shipmentId: p.id, riderId: 'rider-2' }).code).toBe('RECOVERY_ALREADY_PLANNED');
+    state = act(state, { type: 'ADVANCE_TIME', minutes: state.shipments[0].recovery!.rendezvousAt - state.now });
+    expect(state.shipments[0].riderId).toBe('rider-1');
+    state = act(state, { type: 'CONFIRM_RECOVERY', shipmentId: p.id });
+    expect(state.shipments[0]).toMatchObject({ riderId: 'rider-6', status: 'IN_TRANSIT' });
+    expect(state.shipments[0].recovery).toBeUndefined();
+    expect(batchTotals(state, 'batch-1')).toEqual(before);
+    expect(state.events.some(e => e.type === 'RECOVERY_CONFIRMED')).toBe(true);
+    expect(applyAction(state, { type: 'CONFIRM_RECOVERY', shipmentId: p.id }).code).toBe('NO_RECOVERY_PLAN');
     state = reach(state, p.id);
     state = act(state, { type: 'DELIVER', shipmentId: p.id, quantity: 30 });
     invariant(state);
@@ -469,11 +480,89 @@ describe('12 · physically feasible alternate-rider recovery', () => {
     state = act(state, { type: 'RECOVER', shipmentId: p.id, riderId: 'rider-2' });
     expect(state.shipments[0].eta - state.now).toBe(10);
     state = act(state, { type: 'ADVANCE_TIME', minutes: 6 });
+    state = act(state, { type: 'CONFIRM_RECOVERY', shipmentId: p.id });
     state = act(state, { type: 'HEARTBEAT', reservationId: p.reservationId });
     state = reach(state, p.id);
     state = act(state, { type: 'DELIVER', shipmentId: p.id, quantity: 30 });
     expect(state.shipments[0].status).toBe('DELIVERED');
     expect(state.riders[0].online).toBe(false);
+  });
+  it.each(['RIDER_FAILURE', 'UPDATE_RIDER'] as const)('invalidates a pending plan on recovery rider %s without transferring stock', type => {
+    const p = pickup(30); let state = act(p.state, { type: 'RIDER_FAILURE', riderId: 'rider-1' });
+    const before = batchTotals(state, 'batch-1');
+    state = act(state, { type: 'RECOVER', shipmentId: p.id, riderId: 'rider-2' });
+    state = act(state, type === 'RIDER_FAILURE' ? { type, riderId: 'rider-2' } : { type, riderId: 'rider-2', online: false });
+    expect(state.shipments[0]).toMatchObject({ riderId: 'rider-1', status: 'RECOVERY_REQUIRED' });
+    expect(state.shipments[0].recovery).toBeUndefined();
+    expect(batchTotals(state, 'batch-1')).toEqual(before);
+    expect(applyAction(state, { type: 'CONFIRM_RECOVERY', shipmentId: p.id }).ok).toBe(false);
+    state = act(state, { type: 'UPDATE_RIDER', riderId: 'rider-2', capacity: 1 });
+    expect(state.events.some(e => e.type === 'RECOVERY_CANCELLED')).toBe(true);
+  });
+  it('reserves alternate capacity, prevents competing claims and survives an approach longer than seven minutes', () => {
+    const p = pickup(30); let state = act(p.state, { type: 'RIDER_FAILURE', riderId: 'rider-1' });
+    state.riders[1].location = { x: -18, y: 0, label: 'Nine-minute recovery approach' };
+    state = act(state, { type: 'RECOVER', shipmentId: p.id, riderId: 'rider-2' });
+    expect(state.riders[1].available).toBe(false);
+    expect(applyAction(state, { type: 'UPDATE_RIDER', riderId: 'rider-2', capacity: 29 }).code).toBe('COMMITTED_CAPACITY');
+    expect(feasibility(state, 'batch-1', 'rider-2', 'receiver-2', 1).code).toBe('RIDER_BUSY');
+    state = act(state, { type: 'ADVANCE_TIME', minutes: 9 });
+    expect(state.riders[1].online).toBe(true);
+    expect(state.shipments[0]).toMatchObject({ riderId: 'rider-1', status: 'RECOVERY_REQUIRED' });
+    state = act(state, { type: 'CONFIRM_RECOVERY', shipmentId: p.id });
+    expect(state.shipments[0].riderId).toBe('rider-2'); invariant(state);
+  });
+  it('does not hand off when the original physical custody location has changed', () => {
+    const p = pickup(30); let state = act(p.state, { type: 'RIDER_FAILURE', riderId: 'rider-1' });
+    state = act(state, { type: 'RECOVER', shipmentId: p.id, riderId: 'rider-2' });
+    state = act(state, { type: 'ADVANCE_TIME', minutes: state.shipments[0].recovery!.rendezvousAt - state.now });
+    state.riders[0].location.x += 5;
+    const result = applyAction(state, { type: 'CONFIRM_RECOVERY', shipmentId: p.id });
+    expect(result.code).toBe('RECOVERY_LOCATION_CHANGED');
+    expect(result.state.shipments[0]).toMatchObject({ riderId: 'rider-1', status: 'RECOVERY_REQUIRED' });
+    expect(result.state.shipments[0].recovery).toBeUndefined();
+    expect(result.state.riders[1].available).toBe(true);
+  });
+  it('counts all other recovery commitments at the verified handoff', () => {
+    const p = pickup(30); let state = act(p.state, { type: 'RIDER_FAILURE', riderId: 'rider-1' });
+    state = act(state, { type: 'RECOVER', shipmentId: p.id, riderId: 'rider-2' });
+    state = act(state, { type: 'ADVANCE_TIME', minutes: state.shipments[0].recovery!.rendezvousAt - state.now });
+    state.shipments.push({ ...structuredClone(state.shipments[0]), id: 'other-recovery', quantity: 20, riderId: 'rider-3' });
+    const result = applyAction(state, { type: 'CONFIRM_RECOVERY', shipmentId: p.id });
+    expect(result.code).toBe('CAPACITY_EXCEEDED');
+    expect(result.state.shipments[0].riderId).toBe('rider-1');
+    expect(result.state.shipments[0].recovery).toBeUndefined();
+    expect(result.state.riders[1].available).toBe(false);
+  });
+  it('rechecks destination at handoff and uses a safe full-remainder fallback', () => {
+    const p = pickup(30); let state = act(p.state, { type: 'RIDER_FAILURE', riderId: 'rider-1' });
+    state = act(state, { type: 'RECOVER', shipmentId: p.id, riderId: 'rider-2' });
+    state = act(state, { type: 'UPDATE_RECEIVER', receiverId: 'receiver-1', isOpen: false });
+    state = act(state, { type: 'ADVANCE_TIME', minutes: state.shipments[0].recovery!.rendezvousAt - state.now });
+    state = act(state, { type: 'CONFIRM_RECOVERY', shipmentId: p.id });
+    expect(state.shipments[0]).toMatchObject({ riderId: 'rider-2', status: 'IN_TRANSIT', quantity: 30, reroutedFrom: 'receiver-1' });
+    expect(state.shipments[0].receiverId).not.toBe('receiver-1');
+  });
+  it('refuses a handoff when every destination becomes unsafe while recovery is pending', () => {
+    const p = pickup(30); let state = act(p.state, { type: 'RIDER_FAILURE', riderId: 'rider-1' });
+    state = act(state, { type: 'RECOVER', shipmentId: p.id, riderId: 'rider-2' });
+    state = act(state, { type: 'ADVANCE_TIME', minutes: state.shipments[0].recovery!.rendezvousAt - state.now });
+    for (const receiver of state.receivers) receiver.isOpen = false;
+    const result = applyAction(state, { type: 'CONFIRM_RECOVERY', shipmentId: p.id });
+    expect(result.code).toBe('UNSAFE_RECOVERY');
+    expect(result.state.shipments[0].riderId).toBe('rider-1');
+    expect(batchTotals(result.state, 'batch-1').pickedUp).toBe(30);
+  });
+  it.each(['explicit', 'natural'])('%s expiry cancels pending recovery capacity but never returns physical inventory', mode => {
+    const p = pickup(30); let state = act(p.state, { type: 'RIDER_FAILURE', riderId: 'rider-1' });
+    state = act(state, { type: 'RECOVER', shipmentId: p.id, riderId: 'rider-2' });
+    const before = batchTotals(state, 'batch-1');
+    state = act(state, mode === 'explicit' ? { type: 'EXPIRE_BATCH', batchId: 'batch-1' } : { type: 'ADVANCE_TIME', minutes: state.batches[0].safeUntil - state.now });
+    expect(state.shipments[0]).toMatchObject({ riderId: 'rider-1', status: 'EXPIRED', quantity: 30 });
+    expect(state.shipments[0].recovery).toBeUndefined();
+    expect(state.riders[1].available).toBe(true);
+    expect(batchTotals(state, 'batch-1')).toEqual(before);
+    expect(applyAction(state, { type: 'CONFIRM_RECOVERY', shipmentId: p.id }).ok).toBe(false);
   });
 });
 

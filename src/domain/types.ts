@@ -10,7 +10,7 @@ export interface Receiver { id: string; name: string; location: Location; isOpen
 export type ReservationStatus = 'ASSIGNED' | 'ACKNOWLEDGED' | 'EN_ROUTE_TO_DONOR' | 'ARRIVED_AT_DONOR' | 'WARNING_INACTIVE' | 'TIMED_OUT' | 'PICKUP_CONFIRMED' | 'CANCELLED';
 export interface Reservation { id: string; batchId: string; riderId: string; receiverId: string; quantity: number; status: ReservationStatus; createdAt: number; lastHeartbeatAt: number; leaseExpiresAt: number; pickupDeadline: number; pickupEta: number; travelEta: number }
 export type ShipmentStatus = 'IN_TRANSIT' | 'REROUTE_REQUIRED' | 'RECOVERY_REQUIRED' | 'DELIVERED' | 'EXPIRED';
-export interface Shipment { id: string; batchId: string; reservationId: string; riderId: string; receiverId: string; quantity: number; deliveredQuantity: number; pickedUpAt: number; deliveredAt?: number; lastHeartbeatAt: number; eta: number; status: ShipmentStatus; reason?: string; reroutedFrom?: string }
+export interface Shipment { id: string; batchId: string; reservationId: string; riderId: string; receiverId: string; quantity: number; deliveredQuantity: number; pickedUpAt: number; deliveredAt?: number; lastHeartbeatAt: number; eta: number; status: ShipmentStatus; reason?: string; reroutedFrom?: string; recovery?: { riderId: string; rendezvousAt: number; origin: Location } }
 export interface OperationEvent { id: string; timestamp: number; type: string; entityId: string; message: string; severity: 'info' | 'success' | 'warning' | 'danger' }
 export interface OperationsState { version: number; now: number; donors: Donor[]; batches: Batch[]; riders: Rider[]; receivers: Receiver[]; reservations: Reservation[]; shipments: Shipment[]; events: OperationEvent[]; sequence: number }
 export type Action =
@@ -26,7 +26,8 @@ export type Action =
  | { type: 'UPDATE_RIDER'; riderId: string; capacity?: number; available?: boolean; online?: boolean }
  | { type: 'RIDER_FAILURE'; riderId: string }
  | { type: 'REPORT_DELAY'; shipmentId: string; minutes: number }
- | { type: 'RECOVER'; shipmentId: string; riderId: string }
+  | { type: 'RECOVER'; shipmentId: string; riderId: string }
+  | { type: 'CONFIRM_RECOVERY'; shipmentId: string }
  | { type: 'REROUTE'; shipmentId: string }
  | { type: 'UPDATE_RECEIVER'; receiverId: string; isOpen?: boolean; aidType?: AidType; demand?: number; capabilities?: Partial<Record<Capability, boolean>>; storageCapacity?: number }
  | { type: 'CREATE_RECEIVER'; name: string; quantity: number; aidType: AidType; storageCapacity: number; capabilities: Record<Capability, boolean>; latestIn: number }

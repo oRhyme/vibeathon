@@ -1,4 +1,4 @@
-import { ACTIVE_RESERVATIONS, type Action, type ActionResult, type AidType, type Batch, type Capability, type Location, type OperationsState, type Receiver, type Reservation, type Shipment } from './types';
+import { ACTIVE_RESERVATIONS, CAPABILITY_LABELS, type Action, type ActionResult, type AidType, type Batch, type Capability, type Location, type OperationsState, type Receiver, type Reservation, type Shipment } from './types';
 import { createSeed } from './seed';
 
 export const SAFETY_BUFFER = 3;
@@ -9,6 +9,10 @@ const CAPABILITIES: Capability[] = ['cleanWater', 'potableWater', 'cookingFuel',
 const DEFAULT_REQUIREMENTS: Record<AidType, Capability[]> = {
   COOKED_MEALS: ['servingArea'], RAW_RATIONS: ['cleanWater', 'cookingFuel', 'kitchen'], SEALED_KITS: [],
   MEDICINE: ['medicalFacility'], INFANT_FORMULA: ['potableWater', 'servingArea', 'cleanContainers'],
+};
+const MISSING_CAPABILITY_CODES: Record<Capability, string> = {
+  cleanWater: 'MISSING_CLEAN_WATER', potableWater: 'MISSING_POTABLE_WATER', cookingFuel: 'MISSING_COOKING_FUEL', kitchen: 'MISSING_COOKING_FACILITY',
+  servingArea: 'MISSING_SERVING_AREA', coldStorage: 'MISSING_COLD_STORAGE', medicalRefrigeration: 'MISSING_MEDICAL_REFRIGERATION', cleanContainers: 'MISSING_CLEAN_CONTAINERS', medicalFacility: 'MISSING_MEDICAL_FACILITY',
 };
 export interface Feasibility { ok: boolean; code: string; message: string; pickupEta: number; travelEta: number; maxQuantity: number }
 type Decision = { ok: boolean; code: string; message: string };
@@ -31,7 +35,8 @@ function allocated(state: OperationsState, receiverId: string, aidType?: AidType
 }
 function riderLoad(state: OperationsState, riderId: string, exceptReservation?: string, exceptShipment?: string): number {
   return state.reservations.filter(r => r.riderId === riderId && r.id !== exceptReservation && active(r)).reduce((n, r) => n + r.quantity, 0)
-    + state.shipments.filter(s => s.riderId === riderId && s.id !== exceptShipment).reduce((n, s) => n + remainder(s), 0);
+    + state.shipments.filter(s => s.riderId === riderId && s.id !== exceptShipment).reduce((n, s) => n + remainder(s), 0)
+    + state.shipments.filter(s => s.recovery?.riderId === riderId && s.id !== exceptShipment).reduce((n, s) => n + remainder(s), 0);
 }
 function riderProgress(state: OperationsState, riderId: string) {
   state.riders.find(r => r.id === riderId)!.lastHeartbeatAt = state.now;
@@ -40,7 +45,7 @@ function riderProgress(state: OperationsState, riderId: string) {
 function receiverCheck(state: OperationsState, batch: Batch, receiver: Receiver, quantity: number, arrival: number, exceptReservation?: string, exceptShipment?: string): Decision {
   if (!receiver.isOpen) return bad('RECEIVER_CLOSED', `${receiver.name} is closed.`);
   const missing = required(batch).filter(c => !receiver.capabilities[c]);
-  if (missing.length) return bad('INCOMPATIBLE_RECEIVER', `${receiver.name} needs ${missing.join(', ')} for this aid.`);
+  if (missing.length) return bad(MISSING_CAPABILITY_CODES[missing[0]], `${receiver.name} is missing ${missing.map(c => CAPABILITY_LABELS[c]).join(', ')} required for this aid.`);
   if (arrival + SAFETY_BUFFER >= batch.safeUntil) return bad('UNSAFE_ARRIVAL', 'Arrival plus the three-minute safety buffer must be strictly before expiry.');
   if (arrival > receiver.latestArrival) return bad('RECEIVER_DEADLINE', `${receiver.name} cannot receive this late.`);
   if (quantity > receiver.demand[batch.aidType] - allocated(state, receiver.id, batch.aidType, exceptReservation, exceptShipment)) return bad('DEMAND_EXCEEDED', 'This quantity exceeds uncommitted receiver demand.');
@@ -68,7 +73,7 @@ export function feasibility(state: OperationsState, batchId: string, riderId: st
   const existing = state.reservations.filter(r => active(r) && r.riderId === rider.id);
   // A rider may bundle fresh assignments from one donor; total units still share one capacity.
   const bundle = existing.length > 0 && existing.every(r => r.batchId === batch.id && r.status === 'ASSIGNED');
-  if (state.shipments.some(s => s.riderId === rider.id && remainder(s) > 0) || (existing.length > 0 && !bundle)) return answer(bad('RIDER_BUSY', 'The rider is already carrying aid or progressing another pickup.'));
+  if (state.shipments.some(s => (s.riderId === rider.id || s.recovery?.riderId === rider.id) && remainder(s) > 0) || (existing.length > 0 && !bundle)) return answer(bad('RIDER_BUSY', 'The rider is already carrying aid, assigned to recovery or progressing another pickup.'));
   if (!rider.available && !bundle) return answer(bad('RIDER_UNAVAILABLE', 'The rider is unavailable.'));
   if (existing.some(r => r.batchId === batch.id && r.receiverId === receiver.id)) return answer(bad('DUPLICATE_RESERVATION', 'This rider already has an allocation for this receiver and batch.'));
   const amount = quantity ?? maxQuantity;
@@ -173,6 +178,14 @@ function dispatch(state: OperationsState, batchId?: string, replacement = false,
 function physicalLocation(state: OperationsState, shipment: Shipment): Location {
   return state.riders.find(r => r.id === shipment.riderId)!.location;
 }
+function cancelRecovery(state: OperationsState, shipment: Shipment, reason: string) {
+  if (!shipment.recovery) return;
+  const riderId = shipment.recovery.riderId;
+  delete shipment.recovery;
+  shipment.reason = reason;
+  refreshAvailability(state, riderId);
+  event(state, 'RECOVERY_CANCELLED', shipment.id, `${reason} Recovery capacity released; physical custody remains with ${shipment.riderId}.`, 'warning');
+}
 function freeze(state: OperationsState, shipment: Shipment, reason: string) {
   shipment.status = 'RECOVERY_REQUIRED';
   shipment.reason = reason;
@@ -219,6 +232,7 @@ function expireBatch(state: OperationsState, batch: Batch) {
   batch.unavailable = true;
   for (const r of state.reservations.filter(r => r.batchId === batch.id && active(r))) release(state, r, 'Batch expired.');
   for (const s of state.shipments.filter(s => s.batchId === batch.id && remainder(s) > 0 && s.status !== 'EXPIRED')) {
+    cancelRecovery(state, s, 'Batch expired before the recovery handoff.');
     s.status = 'EXPIRED'; s.reason = 'Batch expired while in physical custody.';
     event(state, 'SHIPMENT_EXPIRED', s.id, `${remainder(s)} expired units remain in custody; neither demand nor donor stock is restored.`, 'danger');
   }
@@ -256,6 +270,12 @@ function advance(state: OperationsState, minutes: number) {
     state.now++;
     // Move once per rider toward the next simulated stop. Frozen custody never moves itself.
     for (const rider of state.riders) {
+      const recovery = state.shipments.find(s => s.recovery?.riderId === rider.id)?.recovery;
+      if (recovery && rider.online && state.now <= recovery.rendezvousAt) {
+        const fraction = 1 / Math.max(1, recovery.rendezvousAt - state.now + 1);
+        rider.location = { x: rider.location.x + (recovery.origin.x - rider.location.x) * fraction, y: rider.location.y + (recovery.origin.y - rider.location.y) * fraction, label: state.now === recovery.rendezvousAt ? recovery.origin.label : 'En route to verified recovery rendezvous' };
+        continue;
+      }
       const next = state.shipments.filter(s => s.riderId === rider.id && s.status === 'IN_TRANSIT' && remainder(s) > 0 && s.eta >= state.now).sort((a, b) => a.eta - b.eta)[0];
       if (next) {
         const target = state.receivers.find(r => r.id === next.receiverId)!.location;
@@ -264,6 +284,11 @@ function advance(state: OperationsState, minutes: number) {
       }
     }
     for (const batch of state.batches.filter(b => state.now >= b.safeUntil)) expireBatch(state, batch);
+    for (const shipment of state.shipments.filter(s => s.recovery)) {
+      const plan = shipment.recovery!;
+      const recoveryRider = state.riders.find(r => r.id === plan.riderId)!;
+      if (!recoveryRider.online || distance(physicalLocation(state, shipment), plan.origin) > 0.000001) cancelRecovery(state, shipment, 'Recovery rider went offline or the original physical custody location changed.');
+    }
     const released = new Map<string, number>();
     for (const r of state.reservations.filter(active)) {
       if (state.now >= r.leaseExpiresAt || state.now >= r.pickupDeadline || !state.riders.find(x => x.id === r.riderId)!.online) {
@@ -288,7 +313,7 @@ function advance(state: OperationsState, minutes: number) {
 
 const FIELDS: Record<Action['type'], string[]> = {
   RESET: [], ADVANCE_TIME: ['minutes'], CREATE_BATCH: ['aidType', 'quantity', 'donorId', 'readyIn', 'expiresIn', 'requirements', 'notes'], UPDATE_BATCH: ['batchId', 'quantity', 'unavailable'], AUTO_DISPATCH: ['batchId'], RESERVE: ['batchId', 'riderId', 'receiverId', 'quantity'],
-  ACCEPT: ['reservationId'], START_PICKUP: ['reservationId'], ARRIVE: ['reservationId'], HEARTBEAT: ['reservationId'], DECLINE: ['reservationId'], PICKUP: ['reservationId', 'quantity'], DELIVER: ['shipmentId', 'quantity'], UPDATE_RIDER: ['riderId', 'capacity', 'available', 'online'], RIDER_FAILURE: ['riderId'], REPORT_DELAY: ['shipmentId', 'minutes'], RECOVER: ['shipmentId', 'riderId'], REROUTE: ['shipmentId'], UPDATE_RECEIVER: ['receiverId', 'isOpen', 'aidType', 'demand', 'capabilities', 'storageCapacity'], CREATE_RECEIVER: ['name', 'quantity', 'aidType', 'storageCapacity', 'capabilities', 'latestIn'], EXPIRE_BATCH: ['batchId'],
+  ACCEPT: ['reservationId'], START_PICKUP: ['reservationId'], ARRIVE: ['reservationId'], HEARTBEAT: ['reservationId'], DECLINE: ['reservationId'], PICKUP: ['reservationId', 'quantity'], DELIVER: ['shipmentId', 'quantity'], UPDATE_RIDER: ['riderId', 'capacity', 'available', 'online'], RIDER_FAILURE: ['riderId'], REPORT_DELAY: ['shipmentId', 'minutes'], RECOVER: ['shipmentId', 'riderId'], CONFIRM_RECOVERY: ['shipmentId'], REROUTE: ['shipmentId'], UPDATE_RECEIVER: ['receiverId', 'isOpen', 'aidType', 'demand', 'capabilities', 'storageCapacity'], CREATE_RECEIVER: ['name', 'quantity', 'aidType', 'storageCapacity', 'capabilities', 'latestIn'], EXPIRE_BATCH: ['batchId'],
 };
 function validate(action: unknown): Decision {
   if (!record(action) || typeof action.type !== 'string' || !Object.hasOwn(FIELDS, action.type)) return bad('INVALID_ACTION', 'Unknown or malformed action.');
@@ -420,6 +445,7 @@ function execute(state: OperationsState, action: Exclude<Action, { type: 'RESET'
       if (interruption) {
         const released = new Map<string, number>();
         for (const r of state.reservations.filter(r => active(r) && r.riderId === rider.id)) { release(state, r, 'Rider became unavailable.'); released.set(r.batchId, (released.get(r.batchId) ?? 0) + r.quantity); }
+        for (const s of state.shipments.filter(s => s.recovery?.riderId === rider.id)) cancelRecovery(state, s, 'Assigned recovery rider became unavailable before verified handoff.');
         rider.available = false;
         for (const s of state.shipments.filter(s => s.riderId === rider.id && remainder(s) > 0 && s.status !== 'EXPIRED' && s.status !== 'RECOVERY_REQUIRED')) freeze(state, s, 'Rider reported unavailable after pickup.');
         for (const [batchId, quantity] of released) dispatch(state, batchId, true, quantity);
@@ -455,9 +481,10 @@ function execute(state: OperationsState, action: Exclude<Action, { type: 'RESET'
       const s = state.shipments.find(s => s.id === action.shipmentId); const rider = state.riders.find(r => r.id === action.riderId);
       if (!s || !rider) return bad('NOT_FOUND', 'Shipment or recovery rider not found.');
       if (s.status !== 'RECOVERY_REQUIRED') return bad('INVALID_TRANSITION', 'Only a recovery-required shipment can be transferred; expired custody stays frozen.');
+      if (s.recovery) return bad('RECOVERY_ALREADY_PLANNED', 'This shipment already has a recovery rendezvous; custody has not transferred.');
       if (rider.id === s.riderId || !rider.online || !rider.available || riderLoad(state, rider.id) > 0) return bad('RECOVERY_RIDER_UNAVAILABLE', 'Recovery requires a different online, available, unloaded rider.');
       if (rider.capacity < remainder(s)) return bad('CAPACITY_EXCEEDED', 'Recovery rider cannot carry the full physical remainder.');
-      const origin = physicalLocation(state, s);
+      const origin = { ...physicalLocation(state, s) };
       const approach = pickupMinutes(rider.location, origin);
       const batch = state.batches.find(b => b.id === s.batchId)!;
       let receiver = state.receivers.find(r => r.id === s.receiverId)!;
@@ -467,12 +494,37 @@ function execute(state: OperationsState, action: Exclude<Action, { type: 'RESET'
         if (!alternative) return bad('UNSAFE_RECOVERY', 'No receiver can safely accept the full remainder after the recovery rider reaches physical custody.');
         receiver = alternative.receiver; eta = alternative.eta;
       }
-      const previousRider = s.riderId;
       if (receiver.id !== s.receiverId) { s.reroutedFrom = s.receiverId; s.receiverId = receiver.id; event(state, 'SHIPMENT_REROUTED', s.id, `Recovery route changes destination to ${receiver.name}.`, 'warning'); }
-      s.riderId = rider.id; s.status = 'IN_TRANSIT'; s.eta = eta; s.lastHeartbeatAt = state.now; s.reason = `Recovery rendezvous takes ${approach} min; full physical remainder transferred from ${previousRider}.`;
+      s.recovery = { riderId: rider.id, rendezvousAt: state.now + approach, origin };
+      s.eta = eta; s.reason = `Recovery rendezvous in ${approach} min; physical custody remains with ${s.riderId} until verified handoff.`;
       rider.available = false; rider.lastHeartbeatAt = state.now;
-      event(state, 'RECOVERY_DISPATCHED', s.id, `${rider.name} reaches stranded custody in ${approach} min and delivers ${remainder(s)} units in ${eta - state.now} min. Donor inventory remains unchanged.`, 'success');
-      refreshAvailability(state, previousRider); return good('Recovery rider dispatched with a physically feasible rendezvous and safe delivery ETA.', 'RECOVERED');
+      event(state, 'RECOVERY_DISPATCHED', s.id, `${rider.name} is scheduled to reach stranded custody in ${approach} min. ${remainder(s)} units remain frozen with the original carrier pending verified handoff.`, 'info');
+      return good('Recovery rendezvous scheduled. Confirm the physical handoff after the rider arrives.', 'RECOVERY_SCHEDULED');
+    }
+    case 'CONFIRM_RECOVERY': {
+      const s = state.shipments.find(s => s.id === action.shipmentId); if (!s) return bad('NOT_FOUND', 'Shipment not found.');
+      if (s.status !== 'RECOVERY_REQUIRED' || !s.recovery) return bad('NO_RECOVERY_PLAN', 'No active recovery rendezvous is available for verification.');
+      const plan = s.recovery;
+      if (state.now < plan.rendezvousAt) return bad('RECOVERY_NOT_REACHED', 'The recovery rider has not completed the simulated rendezvous journey.');
+      const rider = state.riders.find(r => r.id === plan.riderId)!;
+      if (!rider.online) { cancelRecovery(state, s, 'Recovery rider is offline.'); return bad('RECOVERY_RIDER_UNAVAILABLE', 'An offline recovery rider cannot receive physical custody.'); }
+      if (riderLoad(state, rider.id, undefined, s.id) + remainder(s) > rider.capacity) { cancelRecovery(state, s, 'Recovery rider capacity is committed elsewhere.'); return bad('CAPACITY_EXCEEDED', 'Full physical remainder exceeds the recovery rider’s capacity after all other commitments.'); }
+      if (distance(physicalLocation(state, s), plan.origin) > 0.000001 || distance(rider.location, plan.origin) > 0.000001) { cancelRecovery(state, s, 'Physical custody or rendezvous location changed.'); return bad('RECOVERY_LOCATION_CHANGED', 'Both riders must meet at the unchanged physical custody location.'); }
+      const batch = state.batches.find(b => b.id === s.batchId)!;
+      let receiver = state.receivers.find(r => r.id === s.receiverId)!;
+      let eta = state.now + travelMinutes(plan.origin, receiver.location);
+      if (!receiverCheck(state, batch, receiver, remainder(s), eta, undefined, s.id).ok) {
+        const alternative = fallback(state, s, plan.origin);
+        if (!alternative) { cancelRecovery(state, s, 'No safe receiver can accept the complete recovery remainder.'); return bad('UNSAFE_RECOVERY', 'Verified handoff cannot proceed without a safe compatible destination for the full remainder.'); }
+        receiver = alternative.receiver; eta = alternative.eta;
+      }
+      const previousRider = s.riderId;
+      if (receiver.id !== s.receiverId) { s.reroutedFrom = s.receiverId; s.receiverId = receiver.id; event(state, 'SHIPMENT_REROUTED', s.id, `Verified recovery destination changed to ${receiver.name}.`, 'warning'); }
+      s.riderId = rider.id; rider.location = { ...plan.origin }; delete s.recovery;
+      s.status = 'IN_TRANSIT'; s.eta = eta; s.lastHeartbeatAt = state.now; s.reason = `Physical recovery handoff verified from ${previousRider} to ${rider.id}.`;
+      rider.available = false; riderProgress(state, rider.id); refreshAvailability(state, previousRider);
+      event(state, 'RECOVERY_CONFIRMED', s.id, `${remainder(s)} units physically handed over to ${rider.name} at the verified rendezvous. Delivery ETA in ${eta - state.now} min; donor inventory unchanged.`, 'success');
+      return good('Physical recovery handoff verified; replacement rider is now in transit.', 'RECOVERED');
     }
     case 'UPDATE_RECEIVER': {
       const receiver = state.receivers.find(r => r.id === action.receiverId); if (!receiver) return bad('NOT_FOUND', 'Receiver not found.');

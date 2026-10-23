@@ -6,7 +6,7 @@ import { createApplication, fileStore } from './app';
 const port = Number(process.env.PORT ?? 5173);
 const app = createApplication(fileStore(resolve(process.env.DATA_FILE ?? '.data/operations.json')));
 const server = createServer(app);
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === 'production' || process.argv.includes('--production')) {
   app.use(express.static(resolve('dist')));
   app.get('/{*path}', (_req, res) => res.sendFile(resolve('dist/index.html')));
 } else {
