@@ -102,6 +102,19 @@ test("desktop operations renders honest zero state and creates real split alloca
   await expect(
     page.getByRole("heading", { name: "Every relay counts." }),
   ).toBeVisible();
+  await expect(page.locator(".dashboard-heading-glance")).toContainText(
+    "21:00 IST",
+  );
+  await expect(
+    page.getByRole("heading", { name: /Dispatch queue/ }),
+  ).toBeVisible();
+  const metricFontSize = await page
+    .locator(".operations-dashboard .metric-value")
+    .first()
+    .evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).fontSize),
+    );
+  expect(metricFontSize).toBeGreaterThanOrEqual(40);
   await expect(page.getByText("0 reserved for pickup")).toBeVisible();
   await page.screenshot({ path: "test-results/relaysafe-desktop.png" });
   await page.getByRole("button", { name: "Auto-dispatch network" }).click();

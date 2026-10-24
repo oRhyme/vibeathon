@@ -156,14 +156,27 @@ export default function OperationsDashboard({
             Good food. The right hands. Before the window closes.
           </p>
         </div>
-        <button
-          className="button primary dispatch-button"
-          disabled={busy}
-          onClick={() => void send({ type: "AUTO_DISPATCH" })}
-        >
-          <Zap size={16} fill="currentColor" /> Auto-dispatch network{" "}
-          <ArrowUpRight size={17} />
-        </button>
+        <div className="dashboard-heading-actions">
+          <div
+            className="dashboard-heading-glance"
+            aria-label="Network snapshot"
+          >
+            <span>NETWORK SNAPSHOT</span>
+            <strong>{formatTime(state.now)} IST</strong>
+            <small>
+              {activeReservations.length} live reservations ·{" "}
+              {openReceivers.length} receiving points open
+            </small>
+          </div>
+          <button
+            className="button primary dispatch-button"
+            disabled={busy}
+            onClick={() => void send({ type: "AUTO_DISPATCH" })}
+          >
+            <Zap size={16} fill="currentColor" /> Auto-dispatch network{" "}
+            <ArrowUpRight size={17} />
+          </button>
+        </div>
       </header>
 
       <section className="operations-metrics" aria-label="Live network totals">
