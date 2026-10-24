@@ -820,6 +820,11 @@ textarea.input {
   border-radius: 50%;
   background: var(--forest);
 }
+.legend-rider {
+  border: 1px solid #f7f8ef;
+  border-radius: 50%;
+  background: #7a9c51;
+}
 .map-legend i.legend-route {
   width: 12px;
   height: 0;

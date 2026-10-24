@@ -389,6 +389,8 @@ export default function OperationsDashboard({
                 })}
               {state.receivers.map((receiver, i) => {
                 const p = mapPoint(receiver.location);
+                const labelAbove = i % 2 === 0;
+                const labelDx = i === 2 ? -22 : 22;
                 const incoming =
                   activeReservations
                     .filter((r) => r.receiverId === receiver.id)
@@ -419,17 +421,17 @@ export default function OperationsDashboard({
                       strokeWidth="3"
                     />
                     <text
-                      x={p.x + (i === 2 ? -14 : 14)}
-                      y={p.y + (i === 2 ? -30 : -10)}
-                      textAnchor={i === 2 ? "end" : "start"}
+                      x={p.x + labelDx}
+                      y={p.y + (labelAbove ? -20 : 26)}
+                      textAnchor={labelDx < 0 ? "end" : "start"}
                       className="map-node-label"
                     >
                       {receiver.location.label.split(" community")[0]}
                     </text>
                     <text
-                      x={p.x + (i === 2 ? -14 : 14)}
-                      y={p.y + (i === 2 ? -16 : 3)}
-                      textAnchor={i === 2 ? "end" : "start"}
+                      x={p.x + labelDx}
+                      y={p.y + (labelAbove ? -6 : 40)}
+                      textAnchor={labelDx < 0 ? "end" : "start"}
                       className="map-node-detail"
                     >
                       {receiver.isOpen
@@ -442,6 +444,7 @@ export default function OperationsDashboard({
               })}
               {state.donors.map((donor, i) => {
                 const p = mapPoint(donor.location);
+                const labelBelow = i % 2 === 1;
                 return (
                   <g key={donor.id}>
                     <rect
@@ -459,18 +462,24 @@ export default function OperationsDashboard({
                       stroke="#173f38"
                       strokeWidth="1.5"
                     />
+                    <path
+                      d={`M${p.x} ${p.y + (labelBelow ? 11 : -11)}V${p.y + (labelBelow ? 24 : -16)}`}
+                      stroke="#69815f"
+                      strokeWidth="1"
+                      strokeDasharray="2 2"
+                    />
                     <text
-                      x={p.x + (i ? -16 : 15)}
-                      y={p.y + (i ? 37 : -28)}
-                      textAnchor={i ? "end" : "start"}
+                      x={p.x}
+                      y={p.y + (labelBelow ? 35 : -21)}
+                      textAnchor="middle"
                       className="map-node-label"
                     >
                       {shortName(donor.name)}
                     </text>
                     <text
-                      x={p.x + (i ? -16 : 15)}
-                      y={p.y + (i ? 50 : -15)}
-                      textAnchor={i ? "end" : "start"}
+                      x={p.x}
+                      y={p.y + (labelBelow ? 48 : -8)}
+                      textAnchor="middle"
                       className="map-node-detail"
                     >
                       Donor station {String(i + 1).padStart(2, "0")}
@@ -540,6 +549,9 @@ export default function OperationsDashboard({
               </span>
               <span>
                 <i className="legend-receiver" /> Receiver
+              </span>
+              <span>
+                <i className="legend-rider" /> Rider
               </span>
               <span>
                 <i className="legend-route" /> Relay
