@@ -578,7 +578,7 @@ export function DonorConsole(props: ConsoleProps) {
       <RoleHero
         eyebrow="DONOR / SUPPLY DESK"
         title="Good things, ready to go."
-        description="Post what is ready. The relay keeps the window and custody visible."
+        description="Post ready aid and keep its pickup window visible."
       >
         <label className="field role-entity-select">
           Donor station
@@ -1301,7 +1301,7 @@ export function RiderConsole(props: ConsoleProps) {
       <RoleHero
         eyebrow="RIDER / FIELD DESK"
         title="Carry the good forward."
-        description="Take the next safe step. Confirm custody only when the handoff is physical."
+        description="Accept a route and confirm each physical handoff."
       >
         <label className="field role-entity-select">
           Rider
@@ -1361,8 +1361,7 @@ export function RiderConsole(props: ConsoleProps) {
                 Pickup jobs <span className="role-count">{activeJobs}</span>
               </h2>
               <p>
-                One action at a time. The current step stays in front; the
-                detail waits below.
+                The next action is here. Open details only when you need them.
               </p>
             </div>
             {jobs.length ? (
@@ -1381,8 +1380,9 @@ export function RiderConsole(props: ConsoleProps) {
                 <div>
                   <h3>No pickup jobs yet.</h3>
                   <p>
-                    Go online and available, then dispatch donor stock into the
-                    relay.
+                    Go online and available, then wait for a pickup assignment.
+                    Accept it, travel to the donor, and confirm what you
+                    collect.
                   </p>
                 </div>
               </div>
@@ -1422,7 +1422,7 @@ export function RiderConsole(props: ConsoleProps) {
                 <Truck size={24} />
                 <div>
                   <h3>No aid in custody yet.</h3>
-                  <p>Confirm a physical pickup to start a delivery.</p>
+                  <p>Accept a job and confirm pickup to start a delivery.</p>
                 </div>
               </div>
             )}
@@ -1796,7 +1796,7 @@ export function ReceiverConsole(props: ConsoleProps) {
       <RoleHero
         eyebrow="RECEIVER / INTAKE DESK"
         title="Ready for the right help."
-        description="Keep demand honest, keep facilities visible, and count only what arrives."
+        description="Keep demand current, then confirm what arrives."
       >
         <label className="field role-entity-select">
           Receiving point
@@ -1846,10 +1846,7 @@ export function ReceiverConsole(props: ConsoleProps) {
                   {shipments.length + assigned.length}
                 </span>
               </h2>
-              <p>
-                Confirm the physical handoff. Every other decision stays
-                reversible.
-              </p>
+              <p>Confirm what arrives. Other changes can be reversed.</p>
             </div>
             {!shipments.length && !assigned.length && (
               <div className="role-empty">
@@ -1857,8 +1854,8 @@ export function ReceiverConsole(props: ConsoleProps) {
                 <div>
                   <h3>No incoming aid yet.</h3>
                   <p>
-                    Keep demand and capabilities up to date. Dispatch assigns
-                    only feasible routes.
+                    Update demand and facilities so dispatch can find a safe
+                    route.
                   </p>
                 </div>
               </div>

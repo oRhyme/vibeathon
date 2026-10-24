@@ -155,7 +155,7 @@ export default function OperationsDashboard({
             Every relay counts<span className="heading-period">.</span>
           </h1>
           <p className="page-description">
-            Good food. The right hands. Before the window closes.
+            Dispatch safe routes before aid expires.
           </p>
         </div>
         <div className="dashboard-heading-actions">
@@ -657,10 +657,10 @@ export default function OperationsDashboard({
           <div className="safety-note">
             <ShieldCheck size={21} />
             <div>
-              <strong>Safety is the shortest route.</strong>
+              <strong>Every route is checked.</strong>
               <p>
-                Every allocation checks capacity, receiving facilities and a
-                3-minute arrival buffer.
+                Capacity, facilities, and the three-minute arrival buffer are
+                checked before allocation.
               </p>
             </div>
           </div>
@@ -701,8 +701,8 @@ export default function OperationsDashboard({
             <strong>
               Reservation → acceptance → travel → arrival → pickup → delivery.
             </strong>{" "}
-            Advance simulation time for travel. A heartbeat renews the lease; it
-            never moves or picks up aid.
+            Move the clock for travel. A heartbeat renews the lease; it does not
+            move or pick up aid.
           </span>
         </div>
         {!state.reservations.length && !state.shipments.length ? (
@@ -713,8 +713,8 @@ export default function OperationsDashboard({
             <div>
               <h3>The next good thing starts here.</h3>
               <p>
-                Auto-dispatch to create safe, capacity-aware allocations. Follow
-                each rider’s progress here.
+                Start dispatch to create safe allocations. Track every rider
+                here.
               </p>
             </div>
             <button
@@ -1078,8 +1078,7 @@ export default function OperationsDashboard({
           </span>
         </div>
         <p className="workbench-description">
-          Choose the exact entity, introduce a real constraint, then follow the
-          decision trail below.
+          Pick the entities, change one constraint, then read the result below.
         </p>
         <div className="simulation-targets">
           <label className="field">
