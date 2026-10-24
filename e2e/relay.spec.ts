@@ -22,7 +22,16 @@ test("root home presents live role cards and opens each console", async ({
   await expect(
     page.getByRole("heading", { name: "Choose the next good handoff." }),
   ).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.classList.contains("lenis")),
+    )
+    .toBe(true);
   await expect(page.locator(".home-role-card")).toHaveCount(4);
+  await expect(page.locator(".home-card-icon-donor")).toHaveCount(1);
+  await expect(page.locator(".home-card-icon-rider")).toHaveCount(1);
+  await expect(page.locator(".home-card-icon-receiver")).toHaveCount(1);
+  await expect(page.locator(".home-card-icon-operations")).toHaveCount(1);
   await expect(page.getByText("220 units ready · 2 stations")).toBeVisible();
   await expect(page.getByText("5/6 online · 5 available")).toBeVisible();
   await expect(page.getByText("5/5 open · 360 units requested")).toBeVisible();
@@ -47,6 +56,13 @@ test("root home presents live role cards and opens each console", async ({
   ] as const) {
     await page.getByRole("button", { name: `Open ${title}` }).click();
     await expect(page).toHaveURL(new RegExp(`${hash}$`));
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          document.documentElement.classList.contains("lenis"),
+        ),
+      )
+      .toBe(false);
     await expect(page.locator(".sidebar")).toHaveCount(0);
     await expect(page.locator(".topbar-role-nav")).toBeVisible();
     await expect(page.locator('nav[aria-label="Role views"]')).toHaveCount(0);
@@ -74,6 +90,27 @@ test("root home presents live role cards and opens each console", async ({
   expect(
     cardTops.every((top, index) => index === 0 || top > cardTops[index - 1]),
   ).toBe(true);
+});
+
+test("home motion respects reduced-motion preferences", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Choose the next good handoff." }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      document.documentElement.classList.contains("lenis"),
+    ),
+  ).toBe(false);
+  expect(
+    Number.parseFloat(
+      await page
+        .locator(".home-role-card")
+        .first()
+        .evaluate((card) => getComputedStyle(card).transitionDuration),
+    ),
+  ).toBeLessThanOrEqual(0.001);
 });
 
 test("role consoles keep the next action visible and secondary detail collapsed", async ({

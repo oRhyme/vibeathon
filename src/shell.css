@@ -724,6 +724,7 @@ textarea.input {
 }
 
 .home-card-icon {
+  position: relative;
   display: grid;
   width: 39px;
   height: 39px;
@@ -731,6 +732,56 @@ textarea.input {
   border-radius: 8px 3px 8px 3px;
   background: #e6edd8;
   color: #5b7749;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.home-card-icon::after {
+  position: absolute;
+  inset: -5px;
+  border: 1px solid currentColor;
+  border-radius: inherit;
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.78);
+}
+
+.home-card-icon svg {
+  position: relative;
+  z-index: 1;
+}
+
+.home-role-card:hover .home-card-icon,
+.home-role-card:focus-within .home-card-icon {
+  box-shadow: 0 7px 14px #5b77491c;
+  transform: translateY(-3px);
+}
+
+.home-role-card:hover .home-card-icon::after,
+.home-role-card:focus-within .home-card-icon::after {
+  animation: home-icon-ring 0.75s ease-out;
+}
+
+.home-role-card:hover .home-card-icon-donor svg,
+.home-role-card:focus-within .home-card-icon-donor svg {
+  animation: home-icon-donor 0.65s ease-out;
+}
+
+.home-role-card:hover .home-card-icon-rider svg,
+.home-role-card:focus-within .home-card-icon-rider svg {
+  animation: home-icon-rider 0.65s ease-out;
+}
+
+.home-role-card:hover .home-card-icon-receiver svg,
+.home-role-card:focus-within .home-card-icon-receiver svg {
+  animation: home-icon-receiver 0.65s ease-out;
+}
+
+.home-role-card:hover .home-card-icon-operations svg,
+.home-role-card:focus-within .home-card-icon-operations svg {
+  animation: home-icon-operations 0.65s ease-out;
 }
 
 .home-role-card .eyebrow {
@@ -840,6 +891,57 @@ textarea.input {
   color: #749159;
 }
 
+@keyframes home-icon-ring {
+  0% {
+    opacity: 0.48;
+    transform: scale(0.78);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.32);
+  }
+}
+
+@keyframes home-icon-donor {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(-8deg);
+  }
+}
+
+@keyframes home-icon-rider {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  50% {
+    transform: translateX(3px) rotate(5deg);
+  }
+}
+
+@keyframes home-icon-receiver {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.13);
+  }
+}
+
+@keyframes home-icon-operations {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(-8deg) scale(1.06);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -848,6 +950,18 @@ textarea.input {
     transition-duration: 0.001ms !important;
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  .home-role-card:hover,
+  .home-role-card:focus-within {
+    transform: none;
+  }
+
+  .home-card-icon,
+  .home-card-icon::after,
+  .home-card-icon svg {
+    animation: none !important;
+    transition: none !important;
   }
 }
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import Lenis from "lenis";
 import {
   ArrowRight,
   Bike,
@@ -47,6 +48,23 @@ const roles = [
 type Role = (typeof roles)[number]["id"];
 type AppRoute = Role | null;
 
+function useHomeSmoothScroll(enabled: boolean) {
+  useEffect(() => {
+    if (!enabled || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    const lenis = new Lenis({
+      autoRaf: true,
+      stopInertiaOnNavigate: true,
+      respectReducedMotion: true,
+      prevent: (node) => node.closest("[data-lenis-prevent]") !== null,
+    });
+
+    return () => lenis.destroy();
+  }, [enabled]);
+}
+
 function routeFromHash(): AppRoute {
   const hash = globalThis.location?.hash.slice(1) ?? "";
   return roles.some((item) => item.id === hash) ? (hash as Role) : null;
@@ -78,7 +96,10 @@ function HomeCard({
       className={`home-role-card ${operations ? "home-role-card-operations" : ""}`}
     >
       <div className="home-card-topline">
-        <span className="home-card-icon">
+        <span
+          className={`home-card-icon home-card-icon-${role}`}
+          aria-hidden="true"
+        >
           <Icon size={20} strokeWidth={1.8} />
         </span>
         <span className="eyebrow">{label}</span>
@@ -532,6 +553,8 @@ export default function App() {
 
   const isHome = role === null;
 
+  useHomeSmoothScroll(isHome);
+
   return (
     <div className={`app-shell ${isHome ? "home-shell" : ""}`}>
       <main className="main-content" id="main">
@@ -709,6 +732,7 @@ export default function App() {
         <div className="dialog-backdrop" onClick={() => setReset(false)}>
           <section
             className="app-dialog reset-dialog"
+            data-lenis-prevent
             role="dialog"
             aria-modal="true"
             aria-labelledby="reset-title"
@@ -760,6 +784,7 @@ function FieldGuide({ close }: { close: () => void }) {
     <div className="dialog-backdrop" onClick={close}>
       <section
         className="app-dialog field-guide"
+        data-lenis-prevent
         role="dialog"
         aria-modal="true"
         aria-labelledby="guide-title"
