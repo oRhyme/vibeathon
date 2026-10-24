@@ -1550,9 +1550,20 @@ textarea.input {
 .operations-dashboard .simulation-workbench .clock-label strong {
   color: #f0f6e9;
 }
-.operations-dashboard .simulation-workbench .eyebrow,
-.operations-dashboard .simulation-workbench .workbench-description,
-.operations-dashboard .simulation-workbench .workbench-group > p,
+.operations-dashboard .simulation-workbench .eyebrow {
+  color: #c9ddc1;
+}
+.operations-dashboard .simulation-workbench .workbench-description {
+  color: #d7e7d0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.operations-dashboard .simulation-workbench .workbench-group > p {
+  min-height: 3.1em;
+  color: #d0e2c8;
+  font-size: 13px;
+  line-height: 1.55;
+}
 .operations-dashboard .simulation-workbench .clock-label span {
   color: #bfd2b9;
 }
@@ -1579,6 +1590,8 @@ textarea.input {
 .operations-dashboard .workbench-group > .button,
 .operations-dashboard .workbench-inline .button,
 .operations-dashboard .clock-actions .button {
+  justify-content: flex-start;
+  text-align: left;
   min-height: 40px;
   border-color: #ffffff35;
   border-radius: 10px;
@@ -1802,6 +1815,14 @@ textarea.input {
   }
   .operations-dashboard .simulation-targets {
     grid-template-columns: 1fr;
+  }
+  .operations-dashboard .simulation-workbench .workbench-description {
+    font-size: 12px;
+  }
+  .operations-dashboard .simulation-workbench .workbench-group > p {
+    min-height: 0;
+    font-size: 11px;
+    line-height: 1.55;
   }
   .operations-dashboard .workbench-group {
     display: flex;
