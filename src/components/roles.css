@@ -1130,6 +1130,82 @@
     padding: 22px 7px;
   }
 }
+
+/* Keep list cards self-contained: headings, status pills, and action panels
+   must stay inside the card's readable padding at every width. */
+.role-register,
+.role-compatibility,
+.role-new-receiver {
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+}
+.role-register {
+  padding: 32px;
+}
+.role-register > .role-section-heading,
+.role-register > .role-section-title {
+  padding-inline: 0;
+}
+.role-batch,
+.role-job,
+.role-expected {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.role-batch {
+  padding: 26px 0 0;
+}
+.role-batch:first-of-type {
+  padding-top: 0;
+}
+.role-batch .role-item-heading,
+.role-job .role-item-heading {
+  min-width: 0;
+  padding-inline: 2px;
+}
+.role-batch .role-item-heading > div,
+.role-job .role-item-heading > div {
+  min-width: 0;
+}
+.role-batch .role-status,
+.role-job .role-status {
+  max-width: 48%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.role-batch-primary,
+.role-job-lead,
+.role-shipment-lead,
+.role-details {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.role-batch-primary {
+  margin-inline: 0;
+}
+.role-job {
+  padding: 24px;
+}
+.role-register > .role-job,
+.role-register > .role-expected {
+  margin-inline: 0;
+}
+
+@media (max-width: 700px) {
+  .role-register {
+    padding: 20px;
+  }
+  .role-batch .role-status,
+  .role-job .role-status {
+    max-width: 100%;
+  }
+  .role-job {
+    padding: 18px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .role-console * {
     transition: none !important;
