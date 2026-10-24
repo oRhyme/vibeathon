@@ -16,6 +16,9 @@ test("root home presents live role cards and opens each console", async ({
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
+  await expect(page.locator(".sidebar")).toHaveCount(0);
+  await expect(page.locator(".topbar-role-nav")).toBeVisible();
+  await expect(page.getByText("Demo", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Choose the next good handoff." }),
   ).toBeVisible();
@@ -44,6 +47,8 @@ test("root home presents live role cards and opens each console", async ({
   ] as const) {
     await page.getByRole("button", { name: `Open ${title}` }).click();
     await expect(page).toHaveURL(new RegExp(`${hash}$`));
+    await expect(page.locator(".sidebar")).toHaveCount(0);
+    await expect(page.locator(".topbar-role-nav")).toBeVisible();
     await expect(page.locator('nav[aria-label="Role views"]')).toHaveCount(0);
     for (const label of [
       "Operations control",
@@ -52,9 +57,6 @@ test("root home presents live role cards and opens each console", async ({
       "Receiving points",
     ])
       await expect(page.getByRole("button", { name: label })).toHaveCount(0);
-    await expect(
-      page.getByRole("link", { name: "Back to desks" }),
-    ).toBeVisible();
     await page.getByRole("link", { name: "RelaySafe home" }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(
@@ -116,6 +118,7 @@ test("desktop operations renders honest zero state and creates real split alloca
     );
   expect(metricFontSize).toBeGreaterThanOrEqual(40);
   await expect(page.getByText("0 reserved for pickup")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Export log" })).toBeVisible();
   await page.screenshot({ path: "test-results/relaysafe-desktop.png" });
   await page.getByRole("button", { name: "Auto-dispatch network" }).click();
   await expect(page.getByText("Decision confirmed")).toBeVisible();

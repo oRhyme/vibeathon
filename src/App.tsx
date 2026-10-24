@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ArrowLeft,
-  ArrowDownToLine,
   ArrowRight,
   Bike,
   BookOpen,
   Check,
   Clock3,
   Command,
+  ChevronDown,
   HeartHandshake,
   LayoutDashboard,
   PackagePlus,
@@ -218,6 +217,76 @@ function HomeScreen({
 function isKnownStaticHost(): boolean {
   const hostname = globalThis.location?.hostname ?? "";
   return hostname === "vercel.app" || hostname.endsWith(".vercel.app");
+}
+
+function RoleNavigation({
+  active,
+  open,
+}: {
+  active: AppRoute;
+  open: (role: Role) => void;
+}) {
+  return (
+    <nav className="topbar-role-nav" aria-label="Role consoles">
+      {roles.map((item) => (
+        <a
+          key={item.id}
+          href={`#${item.id}`}
+          aria-label={`Open ${item.label}`}
+          aria-current={active === item.id ? "page" : undefined}
+          onClick={(event) => {
+            event.preventDefault();
+            open(item.id);
+          }}
+        >
+          {item.id === "operations"
+            ? "Ops"
+            : item.id === "receiver"
+              ? "Receiver"
+              : item.label.split(" ")[0]}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+function DemoMenu({
+  openGuide,
+  localDemo,
+  memoryOnlyDemo,
+  connected,
+}: {
+  openGuide: () => void;
+  localDemo: boolean;
+  memoryOnlyDemo: boolean;
+  connected: boolean;
+}) {
+  return (
+    <details className="demo-menu">
+      <summary className="button small secondary demo-menu-trigger">
+        <Command size={13} /> Demo <ChevronDown size={13} />
+      </summary>
+      <div className="demo-menu-popover">
+        <button className="demo-menu-item" onClick={openGuide}>
+          <BookOpen size={15} />
+          <span>
+            <strong>Judge’s field guide</strong>
+            <small>Run the five-minute relay demo.</small>
+          </span>
+        </button>
+        <div className="demo-menu-status">
+          <span className={`live-dot ${connected ? "" : "offline"}`} />
+          {localDemo
+            ? memoryOnlyDemo
+              ? "Memory-only preview"
+              : "Browser-local preview"
+            : connected
+              ? "Shared state connected"
+              : "Reconnecting"}
+        </div>
+      </div>
+    </details>
+  );
 }
 
 export default function App() {
@@ -465,10 +534,10 @@ export default function App() {
 
   return (
     <div className={`app-shell ${isHome ? "home-shell" : ""}`}>
-      {!isHome && (
-        <aside className="sidebar">
+      <main className="main-content" id="main">
+        <header className={`topbar ${isHome ? "home-topbar" : ""}`}>
           <a
-            className="brand"
+            className="brand topbar-brand"
             href="/"
             aria-label="RelaySafe home"
             onClick={(event) => {
@@ -477,144 +546,14 @@ export default function App() {
             }}
           >
             <span className="brand-mark">
-              <HeartHandshake size={22} strokeWidth={1.8} />
+              <HeartHandshake size={20} strokeWidth={1.8} />
             </span>
             <span>
               Relay<span>Safe</span>
             </span>
           </a>
-          <div className="sidebar-divider" />
-          <div className="sidebar-focus-note">
-            <span className="sidebar-label">FOCUS MODE</span>
-            <p>
-              One desk at a time. Use the RelaySafe mark to return to the role
-              cards.
-            </p>
-          </div>
-          <button className="nav-item" onClick={() => setGuide(true)}>
-            <BookOpen size={17} />
-            Judge’s field guide
-            <ArrowRight size={13} style={{ marginLeft: "auto" }} />
-          </button>
-          <button
-            className="nav-item"
-            onClick={exportTimeline}
-            disabled={!state}
-          >
-            <ArrowDownToLine size={17} />
-            Export decision trail
-          </button>
-          <div className="sidebar-footer">
-            <div className="sidebar-status">
-              <strong>
-                <span
-                  className={`live-dot ${connected && !memoryOnlyDemo ? "" : "offline"}`}
-                />{" "}
-                {localDemo
-                  ? memoryOnlyDemo
-                    ? "Memory-only demo"
-                    : "Browser-local demo"
-                  : connected
-                    ? "Shared state connected"
-                    : "Reconnecting"}
-              </strong>
-              {localDemo
-                ? memoryOnlyDemo
-                  ? "Browser storage is unavailable; changes last until reload."
-                  : "Saved in this browser, not a shared backend."
-                : "One network. Every role in sync."}
-            </div>
-            <p>
-              Keep good moving.
-              <br />
-              Keep every handoff accountable.
-            </p>
-            <div className="sidebar-user">
-              <span className="avatar">RS</span>
-              <div>
-                <strong>Bengaluru pilot</strong>
-                <p>Local simulation · no login</p>
-              </div>
-            </div>
-          </div>
-        </aside>
-      )}
-      <main className="main-content" id="main">
-        {isHome ? (
-          <header className="topbar home-topbar">
-            <a
-              className="brand home-brand"
-              href="/"
-              aria-label="RelaySafe home"
-              onClick={(event) => {
-                event.preventDefault();
-                goHome();
-              }}
-            >
-              <span className="brand-mark">
-                <HeartHandshake size={20} strokeWidth={1.8} />
-              </span>
-              <span>
-                Relay<span>Safe</span>
-              </span>
-            </a>
-            <div className="home-topbar-right">
-              <nav className="home-role-nav" aria-label="Role consoles">
-                {roles.map((item) => (
-                  <a
-                    key={item.id}
-                    href={`#${item.id}`}
-                    aria-label={`Open ${item.label}`}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      changeRole(item.id);
-                    }}
-                  >
-                    {item.id === "operations"
-                      ? "Ops"
-                      : item.id === "receiver"
-                        ? "Receiver"
-                        : item.label.split(" ")[0]}
-                  </a>
-                ))}
-              </nav>
-              <span className="clock-display">
-                <Clock3 size={14} />
-                {state ? formatTime(state.now) : "—"}{" "}
-                <small>IST · simulated</small>
-              </span>
-              <button
-                className="button small secondary reset-button"
-                disabled={busy || !state}
-                onClick={() => setReset(true)}
-              >
-                <RotateCcw size={12} />
-                Reset demo
-              </button>
-            </div>
-          </header>
-        ) : (
-          <header className="topbar">
-            <div className="topbar-left">
-              <a
-                className="topbar-back"
-                href="/"
-                aria-label="Back to desks"
-                onClick={(event) => {
-                  event.preventDefault();
-                  goHome();
-                }}
-              >
-                <ArrowLeft size={14} />
-                <span>Back to desks</span>
-              </a>
-              <span className="topbar-separator">/</span>
-              <span className="workspace-name">Bengaluru relief network</span>
-              <span className="topbar-separator">/</span>
-              <span className="topbar-current">
-                {roles.find((r) => r.id === role)?.label}
-              </span>
-            </div>
+          <div className="topbar-navigation">
+            <RoleNavigation active={role} open={changeRole} />
             <div className="topbar-right">
               <span className="clock-display">
                 <Clock3 size={14} />
@@ -627,11 +566,17 @@ export default function App() {
                 onClick={() => setReset(true)}
               >
                 <RotateCcw size={12} />
-                Reset demo
+                Reset
               </button>
+              <DemoMenu
+                openGuide={() => setGuide(true)}
+                localDemo={localDemo}
+                memoryOnlyDemo={memoryOnlyDemo}
+                connected={connected}
+              />
             </div>
-          </header>
-        )}
+          </div>
+        </header>
         {localDemo && (
           <div className="connection-banner" role="status">
             <ShieldCheck size={15} />
@@ -671,6 +616,7 @@ export default function App() {
                     state={state}
                     act={act}
                     busy={busy || !connected}
+                    exportTimeline={exportTimeline}
                   />
                 )}
                 {role === "donor" && (

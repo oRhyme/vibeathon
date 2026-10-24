@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   ArrowDownLeft,
+  ArrowDownToLine,
   ArrowRight,
   ArrowUpRight,
   Check,
@@ -35,7 +36,8 @@ export default function OperationsDashboard({
   state,
   act,
   busy,
-}: ConsoleProps) {
+  exportTimeline,
+}: ConsoleProps & { exportTimeline?: () => void }) {
   const [batchId, setBatchId] = useState("");
   const [riderId, setRiderId] = useState("");
   const [receiverId, setReceiverId] = useState("");
@@ -680,9 +682,18 @@ export default function OperationsDashboard({
               </span>
             </h2>
           </div>
-          <span className="section-note">
-            <span className="live-dot" /> State-backed custody trail
-          </span>
+          <div className="section-heading-actions">
+            <span className="section-note">
+              <span className="live-dot" /> State-backed custody trail
+            </span>
+            <button
+              className="button small secondary"
+              disabled={!exportTimeline}
+              onClick={exportTimeline}
+            >
+              <ArrowDownToLine size={13} /> Export log
+            </button>
+          </div>
         </div>
         <div className="flow-guide">
           <Route size={17} />
