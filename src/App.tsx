@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ArrowLeft,
   ArrowDownToLine,
   ArrowRight,
   Bike,
@@ -458,10 +459,6 @@ export default function App() {
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-  const exceptions =
-    state?.shipments.filter(
-      (s) => s.status === "RECOVERY_REQUIRED" || s.status === "EXPIRED",
-    ).length ?? 0;
   const memoryOnlyDemo = localDemo && demoPersistence === "memory-only";
 
   const isHome = role === null;
@@ -472,9 +469,12 @@ export default function App() {
         <aside className="sidebar">
           <a
             className="brand"
-            href="#operations"
-            aria-label="RelaySafe operations"
-            onClick={() => changeRole("operations")}
+            href="/"
+            aria-label="RelaySafe home"
+            onClick={(event) => {
+              event.preventDefault();
+              goHome();
+            }}
           >
             <span className="brand-mark">
               <HeartHandshake size={22} strokeWidth={1.8} />
@@ -483,24 +483,14 @@ export default function App() {
               Relay<span>Safe</span>
             </span>
           </a>
-          <p className="sidebar-label">THE EVENING RELAY</p>
-          <nav aria-label="Role views">
-            {roles.map((item) => (
-              <button
-                key={item.id}
-                className={`nav-item ${role === item.id ? "active" : ""}`}
-                aria-current={role === item.id ? "page" : undefined}
-                onClick={() => changeRole(item.id)}
-              >
-                <item.icon size={17} />
-                {item.label}
-                {item.id === "operations" && exceptions > 0 && (
-                  <span className="nav-count">{exceptions}</span>
-                )}
-              </button>
-            ))}
-          </nav>
           <div className="sidebar-divider" />
+          <div className="sidebar-focus-note">
+            <span className="sidebar-label">FOCUS MODE</span>
+            <p>
+              One desk at a time. Use the RelaySafe mark to return to the role
+              cards.
+            </p>
+          </div>
           <button className="nav-item" onClick={() => setGuide(true)}>
             <BookOpen size={17} />
             Judge’s field guide
@@ -606,9 +596,24 @@ export default function App() {
         ) : (
           <header className="topbar">
             <div className="topbar-left">
+              <a
+                className="topbar-back"
+                href="/"
+                aria-label="Back to desks"
+                onClick={(event) => {
+                  event.preventDefault();
+                  goHome();
+                }}
+              >
+                <ArrowLeft size={14} />
+                <span>Back to desks</span>
+              </a>
+              <span className="topbar-separator">/</span>
               <span className="workspace-name">Bengaluru relief network</span>
               <span className="topbar-separator">/</span>
-              <span>{roles.find((r) => r.id === role)?.label}</span>
+              <span className="topbar-current">
+                {roles.find((r) => r.id === role)?.label}
+              </span>
             </div>
             <div className="topbar-right">
               <span className="clock-display">

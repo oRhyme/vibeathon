@@ -23,9 +23,10 @@
   margin: 13px 0 0;
 }
 .role-description {
-  font-size: 12px;
-  color: var(--role-muted);
-  line-height: 1.7;
+  max-width: 720px;
+  font-size: 13px;
+  color: #5e6d60;
+  line-height: 1.75;
   margin-top: 13px;
 }
 .role-entity-select {
@@ -66,9 +67,9 @@
   margin-left: 5px;
 }
 .role-clock p {
-  font-size: 10px;
-  color: #65735c;
-  line-height: 1.6;
+  font-size: 11px;
+  color: #5f6e60;
+  line-height: 1.65;
   margin-top: 4px;
   max-width: 650px;
 }
@@ -106,8 +107,8 @@
   margin-top: 8px;
 }
 .role-section-title p {
-  font-size: 11px;
-  color: var(--role-muted);
+  font-size: 12px;
+  color: #5e6d60;
   line-height: 1.75;
   margin-top: 9px;
 }
@@ -140,7 +141,7 @@
   margin-bottom: 2px;
 }
 .role-console .field {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
   gap: 7px;
   min-width: 0;

@@ -493,6 +493,9 @@ textarea.input {
   .topbar-left > span:last-child {
     display: none;
   }
+  .topbar-back span {
+    display: none;
+  }
   .topbar-right {
     margin-left: auto;
   }
@@ -702,11 +705,16 @@ textarea.input {
   border-radius: 8px;
   color: var(--forest);
   box-shadow: 0 4px 16px #173f3808;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .home-role-card:hover {
   border-color: #b7c99f;
   box-shadow: 0 8px 25px #173f3810;
+  transform: translateY(-2px);
 }
 
 .home-card-topline {
@@ -830,6 +838,17 @@ textarea.input {
 
 .home-note svg {
   color: #749159;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 @media (max-width: 1000px) {

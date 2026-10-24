@@ -36,11 +36,31 @@ test("root home presents live role cards and opens each console", async ({
       page.getByRole("button", { name: `Open ${title}` }),
     ).toBeVisible();
 
-  await page.getByRole("button", { name: "Open Operations Centre" }).click();
-  await expect(page).toHaveURL(/#operations$/);
-  await expect(
-    page.getByRole("heading", { name: "Every relay counts." }),
-  ).toBeVisible();
+  for (const [title, hash] of [
+    ["Donor", "#donor"],
+    ["Rider", "#rider"],
+    ["Receiving Point", "#receiver"],
+    ["Operations Centre", "#operations"],
+  ] as const) {
+    await page.getByRole("button", { name: `Open ${title}` }).click();
+    await expect(page).toHaveURL(new RegExp(`${hash}$`));
+    await expect(page.locator('nav[aria-label="Role views"]')).toHaveCount(0);
+    for (const label of [
+      "Operations control",
+      "Donor desk",
+      "Rider board",
+      "Receiving points",
+    ])
+      await expect(page.getByRole("button", { name: label })).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: "Back to desks" }),
+    ).toBeVisible();
+    await page.getByRole("link", { name: "RelaySafe home" }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(
+      page.getByRole("heading", { name: "Choose the next good handoff." }),
+    ).toBeVisible();
+  }
 
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto("/");
@@ -96,7 +116,7 @@ test("judge can demonstrate a ghost lease warning, release, and replacement from
     page.getByText("timed out", { exact: true }).first(),
   ).toBeVisible();
   await expect(page.getByText("180 reserved for pickup")).toHaveCount(0);
-  await page.getByRole("button", { name: "Rider board", exact: true }).click();
+  await page.goto("/#rider");
   await page.getByLabel("Rider", { exact: true }).selectOption("rider-6");
   // Controlled network-backed toggles change only after the server confirms them.
   await page.getByLabel("Online", { exact: true }).click();
@@ -105,9 +125,7 @@ test("judge can demonstrate a ghost lease warning, release, and replacement from
   await expect(
     page.getByLabel("Available for assignments", { exact: true }),
   ).toBeChecked();
-  await page
-    .getByRole("button", { name: "Operations control", exact: true })
-    .click();
+  await page.goto("/#operations");
   await page.getByRole("button", { name: "Auto-dispatch network" }).click();
   await expect(
     page.locator(".ledger-title").filter({ hasText: "Fatima" }).first(),
@@ -143,9 +161,7 @@ test("pickup, in-transit closure, reroute and receipt work through real controls
     .getByRole("button", { name: "Confirm physical pickup", exact: true })
     .click();
   await expect(page.getByText("40", { exact: true }).first()).toBeVisible();
-  await page
-    .getByRole("button", { name: "Receiving points", exact: true })
-    .click();
+  await page.goto("/#receiver");
   await page
     .getByLabel("Receiving point", { exact: true })
     .selectOption("receiver-2");
@@ -159,7 +175,7 @@ test("pickup, in-transit closure, reroute and receipt work through real controls
   let latest = await (await request.get("/api/state")).json();
   const shipment = latest.shipments[0];
   expect(shipment.receiverId).not.toBe("receiver-2");
-  await page.getByRole("button", { name: "Rider board", exact: true }).click();
+  await page.goto("/#rider");
   await expect(
     page.getByRole("button", { name: "Confirm delivery", exact: true }),
   ).toBeDisabled();
