@@ -1213,6 +1213,63 @@
   }
 }
 
+/* Desk heroes are orientation, not the main task. Keep the first action in
+   view on a normal 1440×800 screen. */
+.role-console {
+  gap: 14px;
+}
+.role-hero {
+  min-height: 154px;
+  padding: 27px 34px;
+  border-radius: 20px;
+}
+.role-hero .page-heading {
+  margin-top: 14px;
+  font-size: clamp(39px, 4.2vw, 58px);
+  letter-spacing: -2.6px;
+  line-height: 0.98;
+  white-space: nowrap;
+}
+.role-hero .role-description {
+  max-width: none;
+  margin-top: 9px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.role-hero-control {
+  min-width: 220px;
+  max-width: 270px;
+}
+.role-hero-control .select {
+  min-height: 42px;
+}
+.role-clock {
+  min-height: 58px;
+}
+.role-signal {
+  min-height: 92px;
+}
+
+@media (max-width: 900px) {
+  .role-hero .page-heading,
+  .role-hero .role-description {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 700px) {
+  .role-hero {
+    padding: 24px 20px 20px;
+  }
+  .role-hero .page-heading {
+    font-size: 42px;
+  }
+  .role-hero .role-description {
+    font-size: 11px;
+  }
+}
+
 /* A calmer role-console system: one clear decision, then the details. */
 .role-console {
   max-width: 1180px;
