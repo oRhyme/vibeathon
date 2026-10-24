@@ -616,9 +616,9 @@ export function DonorConsole(props: ConsoleProps) {
               detail="assigned, not collected"
             />
             <RoleSignal
-              label="In motion"
+              label="In transit"
               value={units(inMotionUnits)}
-              detail="collected, still accountable"
+              detail="collected and still moving"
             />
           </div>
           <div className="role-donor-layout role-focus-grid">
@@ -968,7 +968,7 @@ function ShipmentCard({
             Confirmed received <strong>{shipment.deliveredQuantity}</strong>
           </span>
           <span>
-            In rider custody <strong>{remaining}</strong>
+            In custody <strong>{remaining} units</strong>
           </span>
           <span>
             Arrival <strong>{formatTime(shipment.eta)}</strong>
@@ -1345,7 +1345,7 @@ export function RiderConsole(props: ConsoleProps) {
             />
             <RoleSignal
               label="In custody"
-              value={`${units(custodyUnits)} u`}
+              value={`${units(custodyUnits)} units`}
               detail="physical units still moving"
             />
           </div>
@@ -1392,7 +1392,7 @@ export function RiderConsole(props: ConsoleProps) {
             <div className="role-section-title role-section-heading">
               <span className="eyebrow">PHYSICAL CUSTODY</span>
               <h2>
-                On the move{" "}
+                In transit{" "}
                 <span className="role-count">
                   {
                     shipments.filter(
@@ -1502,13 +1502,13 @@ function ReceiverSettings({
         />
         <RoleSignal
           label="Demand"
-          value={`${units(outstandingDemand)} u`}
+          value={`${units(outstandingDemand)} units`}
           detail="outstanding across aid types"
         />
         <RoleSignal
           label="Storage free"
-          value={`${units(freeStorage)} u`}
-          detail={`${units(committed)} u committed inbound`}
+          value={`${units(freeStorage)} units`}
+          detail={`${units(committed)} units committed inbound`}
         />
       </div>
       <RoleDetails label="Edit demand, storage & facilities">
@@ -1822,13 +1822,13 @@ export function ReceiverConsole(props: ConsoleProps) {
           <div className="role-signal-grid" aria-label="Receiver snapshot">
             <RoleSignal
               label="Incoming"
-              value={`${units(incomingUnits)} u`}
+              value={`${units(incomingUnits)} units`}
               detail="assigned or already collected"
               accent={incomingUnits > 0}
             />
             <RoleSignal
               label="Received"
-              value={`${units(receivedUnits)} u`}
+              value={`${units(receivedUnits)} units`}
               detail="confirmed physical handoff"
             />
             <RoleSignal

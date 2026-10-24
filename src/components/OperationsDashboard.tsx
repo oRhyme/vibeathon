@@ -202,7 +202,7 @@ export default function OperationsDashboard({
             {count(inTransit)}
             <span>units</span>
           </div>
-          <div className="metric-detail">Physical aid in rider custody</div>
+          <div className="metric-detail">Units currently in custody</div>
         </div>
         <div className="metric">
           <div className="metric-label">
