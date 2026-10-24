@@ -988,3 +988,110 @@ textarea.input {
     font-size: 9px;
   }
 }
+
+/* Keep the control desk in the same visual family as the focused role desks. */
+.operations-dashboard .dashboard-heading {
+  position: relative;
+  isolation: isolate;
+  align-items: stretch;
+  min-height: 210px;
+  margin-bottom: 18px;
+  padding: 34px 40px;
+  overflow: hidden;
+  border: 1px solid #204d43;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 84% 22%, #a7c96c38, transparent 28%),
+    radial-gradient(circle at 70% 100%, #5d8b7240, transparent 38%),
+    var(--forest);
+  box-shadow: 0 20px 48px #173f3820;
+}
+.operations-dashboard .dashboard-heading::after {
+  position: absolute;
+  z-index: -1;
+  width: 350px;
+  height: 350px;
+  right: -92px;
+  top: -150px;
+  border: 1px solid #d4ef9135;
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+.operations-dashboard .dashboard-heading .eyebrow {
+  color: #cfe2ba;
+}
+.operations-dashboard .dashboard-heading .page-heading {
+  max-width: 700px;
+  margin-top: 22px;
+  color: #f2f6e9;
+  font-size: clamp(46px, 5.5vw, 74px);
+  letter-spacing: -3.2px;
+  line-height: 0.99;
+}
+.operations-dashboard .dashboard-heading .page-description {
+  margin-top: 17px;
+  color: #bfd0bc;
+  font-size: 13px;
+}
+.operations-dashboard .dispatch-button {
+  align-self: flex-end;
+  margin-top: 0;
+  border-color: var(--lime);
+  border-radius: 12px;
+  background: var(--lime);
+  color: var(--forest);
+  box-shadow: 0 10px 25px #102c2730;
+}
+.operations-dashboard .dispatch-button:hover:not(:disabled) {
+  background: #e1f5ac;
+}
+.operations-dashboard .operations-metrics {
+  margin-bottom: 22px;
+  padding: 20px 0;
+  border: 1px solid #dce4d2;
+  border-radius: 18px;
+  background: #fffef8;
+  box-shadow: 0 8px 22px #173f3808;
+}
+.operations-dashboard .metric:first-child {
+  padding-left: 20px;
+}
+.operations-dashboard .metric:last-child {
+  padding-right: 20px;
+}
+
+@media (max-width: 700px) {
+  .operations-dashboard .dashboard-heading {
+    display: block;
+    min-height: 0;
+    padding: 27px 22px 22px;
+    border-radius: 19px;
+  }
+  .operations-dashboard .dashboard-heading .page-heading {
+    margin-top: 18px;
+    font-size: 45px;
+    letter-spacing: -2.2px;
+  }
+  .operations-dashboard .dashboard-heading .page-description {
+    font-size: 12px;
+    line-height: 1.65;
+  }
+  .operations-dashboard .dispatch-button {
+    width: 100%;
+    margin-top: 24px;
+  }
+  .operations-dashboard .operations-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 0;
+    padding: 18px 0;
+  }
+  .operations-dashboard .metric,
+  .operations-dashboard .metric:first-child,
+  .operations-dashboard .metric:last-child {
+    padding: 0 16px;
+  }
+  .operations-dashboard .metric:nth-child(3) {
+    border-left: 0;
+  }
+}

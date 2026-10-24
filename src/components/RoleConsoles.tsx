@@ -1,8 +1,9 @@
 /// <reference types="vite/client" />
-import { useId, useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent, type ReactNode } from "react";
 import {
   ArrowRight,
   Check,
+  ChevronDown,
   Clock3,
   MapPin,
   Package,
@@ -46,19 +47,85 @@ const formCapabilities = (data: FormData): Record<Capability, boolean> =>
     capabilities.map((capability) => [capability, data.has(capability)]),
   ) as Record<Capability, boolean>;
 
+function RoleHero({
+  eyebrow,
+  title,
+  description,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <header className="role-heading role-hero">
+      <div className="role-hero-copy">
+        <div className="role-kicker">
+          <span className="live-dot" /> {eyebrow}
+        </div>
+        <h1 className="page-heading">{title}</h1>
+        <p className="role-description">{description}</p>
+      </div>
+      <div className="role-hero-control">{children}</div>
+    </header>
+  );
+}
+
+function RoleSignal({
+  label,
+  value,
+  detail,
+  accent = false,
+}: {
+  label: string;
+  value: ReactNode;
+  detail?: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className={`role-signal ${accent ? "role-signal-accent" : ""}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      {detail && <small>{detail}</small>}
+    </div>
+  );
+}
+
+function RoleDetails({
+  label,
+  children,
+  open = false,
+  className = "",
+}: {
+  label: string;
+  children: ReactNode;
+  open?: boolean;
+  className?: string;
+}) {
+  return (
+    <details className={`role-details ${className}`} open={open}>
+      <summary>
+        <span>{label}</span>
+        <ChevronDown size={15} />
+      </summary>
+      <div className="role-details-content">{children}</div>
+    </details>
+  );
+}
+
 function Clock({ state, act, busy }: ConsoleProps) {
   return (
     <aside className="role-clock" aria-label="Simulation clock">
-      <Clock3 size={19} />
-      <div>
-        <strong>
-          {formatTime(state.now)} <span>simulated local time</span>
-        </strong>
-        <p>
-          Travel takes simulated minutes. Advance the clock, confirm arrival,
-          and keep leases alive with progress updates.
-        </p>
+      <span className="role-clock-icon">
+        <Clock3 size={17} />
+      </span>
+      <div className="role-clock-readout">
+        <span className="role-clock-label">SIMULATED TIME</span>
+        <strong>{formatTime(state.now)}</strong>
+        <span className="role-clock-zone">IST · local relay clock</span>
       </div>
+      <p className="role-clock-note">Advance time to move the next handoff.</p>
       <div className="role-actions">
         <button
           className="button secondary"
@@ -221,63 +288,64 @@ function CreateBatch({
             ))}
           </select>
         </label>
-        <div className="role-form-grid">
-          <label className="field">
-            Quantity · units
-            <input
-              className="input"
-              name="quantity"
-              type="number"
-              required
-              min="1"
-              max="1000000"
-              step="1"
-              defaultValue="40"
-            />
-          </label>
-          <label className="field">
-            Ready in · minutes
-            <input
-              className="input"
-              name="readyIn"
-              type="number"
-              required
-              min="0"
-              max="10080"
-              step="1"
-              defaultValue="0"
-            />
-          </label>
-          <label className="field">
-            Expires in · minutes
-            <input
-              className="input"
-              name="expiresIn"
-              type="number"
-              required
-              min="1"
-              max="10080"
-              step="1"
-              defaultValue="45"
-            />
-          </label>
-        </div>
-        <CapabilityFields legend="Additional receiving requirements" />
-        <p className="role-help">
-          The dispatch engine always adds the selected aid’s baseline
-          requirements. These checkboxes add requirements; they do not remove
-          them.
-        </p>
-        <label className="field">
-          Handoff notes
-          <textarea
-            className="input role-textarea"
-            name="notes"
-            maxLength={2000}
-            rows={3}
-            placeholder="Packaging, collection point, handling instructions…"
+        <label className="field role-primary-number">
+          Quantity · units
+          <input
+            className="input"
+            name="quantity"
+            type="number"
+            required
+            min="1"
+            max="1000000"
+            step="1"
+            defaultValue="40"
           />
         </label>
+        <RoleDetails label="Timing, facilities & handoff notes">
+          <div className="role-form-grid">
+            <label className="field">
+              Ready in · minutes
+              <input
+                className="input"
+                name="readyIn"
+                type="number"
+                required
+                min="0"
+                max="10080"
+                step="1"
+                defaultValue="0"
+              />
+            </label>
+            <label className="field">
+              Expires in · minutes
+              <input
+                className="input"
+                name="expiresIn"
+                type="number"
+                required
+                min="1"
+                max="10080"
+                step="1"
+                defaultValue="45"
+              />
+            </label>
+          </div>
+          <CapabilityFields legend="Additional receiving requirements" />
+          <p className="role-help">
+            Baseline aid requirements are always included. These facilities add
+            constraints; they never remove them.
+          </p>
+          <label className="field">
+            Handoff notes
+            <textarea
+              className="input role-textarea"
+              name="notes"
+              maxLength={2000}
+              rows={3}
+              placeholder="Packaging, collection point, handling instructions…"
+            />
+          </label>
+        </RoleDetails>
         <button className="button primary role-submit" type="submit">
           <Package size={16} /> Post batch <ArrowRight size={16} />
         </button>
@@ -321,150 +389,160 @@ function BatchCard({
                 : "Ready for pickup"}
         </span>
       </div>
-      <div className="role-timing">
-        <span>
-          Ready <strong>{formatTime(batch.readyAt)}</strong>
-        </span>
-        <span>
-          Expiry <strong>{formatTime(batch.safeUntil)}</strong>
-        </span>
-        <span>
-          {expired
-            ? "Safety window closed"
-            : `${batch.safeUntil - state.now} min remaining`}
-        </span>
+      <div className="role-batch-primary">
+        <div className="role-batch-availability">
+          <span>AVAILABLE NOW</span>
+          <strong>{units(totals.available)}</strong>
+          <small>of {units(totals.total)} posted units</small>
+        </div>
+        <div className="role-batch-primary-copy">
+          <div className="role-timing">
+            <span>
+              Ready <strong>{formatTime(batch.readyAt)}</strong>
+            </span>
+            <span>
+              Expires <strong>{formatTime(batch.safeUntil)}</strong>
+            </span>
+            <span>
+              {expired
+                ? "Safety window closed"
+                : `${batch.safeUntil - state.now} min remaining`}
+            </span>
+          </div>
+          <button
+            className="button secondary"
+            disabled={
+              busy || expired || batch.unavailable || totals.available < 1
+            }
+            onClick={() =>
+              send(act, { type: "AUTO_DISPATCH", batchId: batch.id })
+            }
+          >
+            Find safe routes <ArrowRight size={14} />
+          </button>
+        </div>
       </div>
-      <dl className="role-stock-totals">
-        <div>
-          <dt>Total posted</dt>
-          <dd>{units(totals.total)}</dd>
-        </div>
-        <div>
-          <dt>Available</dt>
-          <dd>{units(totals.available)}</dd>
-        </div>
-        <div>
-          <dt>Assigned, uncollected</dt>
-          <dd>{units(totals.reserved)}</dd>
-        </div>
-        <div>
-          <dt>Physically collected</dt>
-          <dd>{units(totals.pickedUp)}</dd>
-        </div>
-        <div>
-          <dt>Delivered</dt>
-          <dd>{units(totals.delivered)}</dd>
-        </div>
-      </dl>
-      <p className="role-help">
-        {units(totals.pickedUp - totals.delivered)} collected units remain in
-        rider custody. An assignment alone does not confirm collection.
-      </p>
-      {batch.notes && <p className="role-note">{batch.notes}</p>}
-      <p className="role-requirements">
-        <ShieldCheck size={14} /> Receiving requirements:{" "}
-        {batch.requirements.length
-          ? batch.requirements
-              .map((capability) => CAPABILITY_LABELS[capability])
-              .join(", ")
-          : "No additional facilities"}
-      </p>
-      <div className="role-batch-edit">
-        <NumberEdit
-          label="Quantity still at donor · includes assignments"
-          value={batch.quantity - totals.pickedUp}
-          min={totals.reserved}
-          busy={busy}
-          save={(quantity) =>
-            act({
-              type: "UPDATE_BATCH",
-              batchId: batch.id,
-              quantity: quantity + totals.pickedUp,
-            })
-          }
-          help={`Saving updates the batch total; ${totals.pickedUp} already collected units stay accounted for.`}
-        />
-        <label className="role-check">
-          <input
-            type="checkbox"
-            checked={batch.unavailable}
-            disabled={busy || expired}
-            onChange={(event) =>
-              send(act, {
+      <RoleDetails label="Stock, constraints & handoff register">
+        <dl className="role-stock-totals">
+          <div>
+            <dt>Total posted</dt>
+            <dd>{units(totals.total)}</dd>
+          </div>
+          <div>
+            <dt>Available</dt>
+            <dd>{units(totals.available)}</dd>
+          </div>
+          <div>
+            <dt>Assigned, uncollected</dt>
+            <dd>{units(totals.reserved)}</dd>
+          </div>
+          <div>
+            <dt>Physically collected</dt>
+            <dd>{units(totals.pickedUp)}</dd>
+          </div>
+          <div>
+            <dt>Delivered</dt>
+            <dd>{units(totals.delivered)}</dd>
+          </div>
+        </dl>
+        <p className="role-help">
+          {units(totals.pickedUp - totals.delivered)} collected units remain in
+          rider custody. An assignment alone does not confirm collection.
+        </p>
+        {batch.notes && <p className="role-note">{batch.notes}</p>}
+        <p className="role-requirements">
+          <ShieldCheck size={14} /> Receiving requirements:{" "}
+          {batch.requirements.length
+            ? batch.requirements
+                .map((capability) => CAPABILITY_LABELS[capability])
+                .join(", ")
+            : "No additional facilities"}
+        </p>
+        <div className="role-batch-edit">
+          <NumberEdit
+            label="Quantity still at donor · includes assignments"
+            value={batch.quantity - totals.pickedUp}
+            min={totals.reserved}
+            busy={busy}
+            save={(quantity) =>
+              act({
                 type: "UPDATE_BATCH",
                 batchId: batch.id,
-                unavailable: event.target.checked,
+                quantity: quantity + totals.pickedUp,
               })
             }
+            help={`Saving updates the batch total; ${totals.pickedUp} already collected units stay accounted for.`}
           />
-          <span>Mark unavailable</span>
-        </label>
-      </div>
-      <div className="role-actions">
-        <button
-          className="button secondary"
-          disabled={
-            busy || expired || batch.unavailable || totals.available < 1
-          }
-          onClick={() =>
-            send(act, { type: "AUTO_DISPATCH", batchId: batch.id })
-          }
-        >
-          Find safe routes <ArrowRight size={14} />
-        </button>
-      </div>
-      {(reservations.length > 0 || shipments.length > 0) && (
-        <div className="role-custody">
-          <h4>Live handoff register</h4>
-          {reservations.map((reservation) => (
-            <div className="role-custody-row" key={reservation.id}>
-              <Package size={15} />
-              <div>
-                <strong>
-                  {
-                    state.riders.find(
-                      (rider) => rider.id === reservation.riderId,
-                    )?.name
-                  }
-                </strong>
-                <span>
-                  {reservation.quantity} assigned for{" "}
-                  {
-                    state.receivers.find(
-                      (receiver) => receiver.id === reservation.receiverId,
-                    )?.name
-                  }{" "}
-                  · not yet collected
-                </span>
-              </div>
-              <Status value={reservation.status} />
-            </div>
-          ))}
-          {shipments.map((shipment) => (
-            <div className="role-custody-row" key={shipment.id}>
-              <Truck size={15} />
-              <div>
-                <strong>
-                  {
-                    state.riders.find((rider) => rider.id === shipment.riderId)
-                      ?.name
-                  }
-                </strong>
-                <span>
-                  {shipment.quantity} collected · {shipment.deliveredQuantity}{" "}
-                  delivered ·{" "}
-                  {
-                    state.receivers.find(
-                      (receiver) => receiver.id === shipment.receiverId,
-                    )?.name
-                  }
-                </span>
-              </div>
-              <Status value={shipment.status} />
-            </div>
-          ))}
+          <label className="role-check">
+            <input
+              type="checkbox"
+              checked={batch.unavailable}
+              disabled={busy || expired}
+              onChange={(event) =>
+                send(act, {
+                  type: "UPDATE_BATCH",
+                  batchId: batch.id,
+                  unavailable: event.target.checked,
+                })
+              }
+            />
+            <span>Mark unavailable</span>
+          </label>
         </div>
-      )}
+        {(reservations.length > 0 || shipments.length > 0) && (
+          <div className="role-custody">
+            <h4>Live handoff register</h4>
+            {reservations.map((reservation) => (
+              <div className="role-custody-row" key={reservation.id}>
+                <Package size={15} />
+                <div>
+                  <strong>
+                    {
+                      state.riders.find(
+                        (rider) => rider.id === reservation.riderId,
+                      )?.name
+                    }
+                  </strong>
+                  <span>
+                    {reservation.quantity} assigned for{" "}
+                    {
+                      state.receivers.find(
+                        (receiver) => receiver.id === reservation.receiverId,
+                      )?.name
+                    }{" "}
+                    · not yet collected
+                  </span>
+                </div>
+                <Status value={reservation.status} />
+              </div>
+            ))}
+            {shipments.map((shipment) => (
+              <div className="role-custody-row" key={shipment.id}>
+                <Truck size={15} />
+                <div>
+                  <strong>
+                    {
+                      state.riders.find(
+                        (rider) => rider.id === shipment.riderId,
+                      )?.name
+                    }
+                  </strong>
+                  <span>
+                    {shipment.quantity} collected · {shipment.deliveredQuantity}{" "}
+                    delivered ·{" "}
+                    {
+                      state.receivers.find(
+                        (receiver) => receiver.id === shipment.receiverId,
+                      )?.name
+                    }
+                  </span>
+                </div>
+                <Status value={shipment.status} />
+              </div>
+            ))}
+          </div>
+        )}
+      </RoleDetails>
     </article>
   );
 }
@@ -475,16 +553,33 @@ export function DonorConsole(props: ConsoleProps) {
   const donor =
     state.donors.find((item) => item.id === selected) ?? state.donors[0];
   const batches = state.batches.filter((batch) => batch.donorId === donor?.id);
+  const readyUnits = batches.reduce((total, batch) => {
+    if (batch.unavailable || batch.safeUntil <= state.now) return total;
+    return total + Math.max(0, batchTotals(state, batch.id).available);
+  }, 0);
+  const assignedUnits = state.reservations
+    .filter(
+      (reservation) =>
+        batches.some((batch) => batch.id === reservation.batchId) &&
+        ACTIVE_RESERVATIONS.includes(reservation.status),
+    )
+    .reduce((total, reservation) => total + reservation.quantity, 0);
+  const inMotionUnits = state.shipments
+    .filter((shipment) =>
+      batches.some((batch) => batch.id === shipment.batchId),
+    )
+    .reduce(
+      (total, shipment) =>
+        total + shipment.quantity - shipment.deliveredQuantity,
+      0,
+    );
   return (
     <div className="role-console">
-      <header className="role-heading">
-        <div>
-          <span className="eyebrow">THE DONOR DESK</span>
-          <h1 className="page-heading">Good things, ready to go.</h1>
-          <p className="role-description">
-            A clear count, a safe window, and proof of every handoff.
-          </p>
-        </div>
+      <RoleHero
+        eyebrow="DONOR / SUPPLY DESK"
+        title="Good things, ready to go."
+        description="Post what is ready. The relay keeps the window and custody visible."
+      >
         <label className="field role-entity-select">
           Donor station
           <select
@@ -500,15 +595,33 @@ export function DonorConsole(props: ConsoleProps) {
             ))}
           </select>
         </label>
-      </header>
+      </RoleHero>
       <Clock {...props} />
       {donor ? (
         <>
-          <div className="role-location">
+          <div className="role-location role-location-chip">
             <MapPin size={15} />
             {donor.location.label}
           </div>
-          <div className="role-donor-layout">
+          <div className="role-signal-grid" aria-label="Donor snapshot">
+            <RoleSignal
+              label="Ready now"
+              value={units(readyUnits)}
+              detail="units available to dispatch"
+              accent
+            />
+            <RoleSignal
+              label="In reservations"
+              value={units(assignedUnits)}
+              detail="assigned, not collected"
+            />
+            <RoleSignal
+              label="In motion"
+              value={units(inMotionUnits)}
+              detail="collected, still accountable"
+            />
+          </div>
+          <div className="role-donor-layout role-focus-grid">
             <CreateBatch
               key={`${donor.id}-${batches.map((batch) => batch.id).join("-")}`}
               donorId={donor.id}
@@ -516,12 +629,15 @@ export function DonorConsole(props: ConsoleProps) {
               busy={busy}
             />
             <section className="role-register">
-              <div className="role-section-title">
-                <span className="eyebrow">FROM OFFER TO HANDOFF</span>
+              <div className="role-section-title role-section-heading">
+                <span className="eyebrow">SUPPLY LEDGER</span>
                 <h2>
-                  Your batch register{" "}
+                  Live batches{" "}
                   <span className="role-count">{batches.length}</span>
                 </h2>
+                <p>
+                  One clear view of what is ready, reserved, or already moving.
+                </p>
               </div>
               {batches.length ? (
                 [...batches]
@@ -548,29 +664,24 @@ export function DonorConsole(props: ConsoleProps) {
 function Progress({ stage }: { stage: number }) {
   return (
     <ol className="role-progress" aria-label="Relay progress">
-      {[
-        "Assigned",
-        "Accepted",
-        "To donor",
-        "Arrived",
-        "Collected",
-        "Delivered",
-      ].map((label, index) => (
-        <li
-          key={label}
-          className={
-            index < stage
-              ? "role-step-complete"
-              : index === stage
-                ? "role-step-current"
-                : ""
-          }
-          aria-current={index === stage ? "step" : undefined}
-        >
-          <span>{index < stage ? <Check size={12} /> : index + 1}</span>
-          {label}
-        </li>
-      ))}
+      {["Assigned", "Accepted", "Pickup", "Arrival", "Collected", "Done"].map(
+        (label, index) => (
+          <li
+            key={label}
+            className={
+              index < stage
+                ? "role-step-complete"
+                : index === stage
+                  ? "role-step-current"
+                  : ""
+            }
+            aria-current={index === stage ? "step" : undefined}
+          >
+            <span>{index < stage ? <Check size={12} /> : index + 1}</span>
+            {label}
+          </li>
+        ),
+      )}
     </ol>
   );
 }
@@ -631,31 +742,41 @@ function ReservationCard({
         </div>
         <Status value={reservation.status} />
       </div>
-      <div className="role-job-facts">
-        <span>
-          <strong>{reservation.quantity}</strong> assigned units
-        </span>
-        <span>
-          Pickup travel <strong>{reservation.pickupEta} min</strong>
-        </span>
-        <span>
-          Delivery travel <strong>{reservation.travelEta} min</strong>
-        </span>
-        <span>
-          Estimated delivery <strong>{formatTime(estimatedDelivery)}</strong>
-        </span>
-        <span>
-          Lease <strong>{formatTime(reservation.leaseExpiresAt)}</strong>
-        </span>
-        <span>
-          Pickup deadline{" "}
-          <strong>{formatTime(reservation.pickupDeadline)}</strong>
-        </span>
-        <span>
-          Batch expires{" "}
-          <strong>{batch ? formatTime(batch.safeUntil) : "—"}</strong>
-        </span>
+      <div className="role-job-lead">
+        <div>
+          <span>ASSIGNED LOAD</span>
+          <strong>{units(reservation.quantity)} units</strong>
+          <small>Physical custody starts at pickup.</small>
+        </div>
+        <div className="role-job-next">
+          <span>NEXT STEP</span>
+          <strong>{statusLabel(reservation.status)}</strong>
+        </div>
       </div>
+      <RoleDetails label="Route, lease & arrival details">
+        <div className="role-job-facts">
+          <span>
+            Pickup travel <strong>{reservation.pickupEta} min</strong>
+          </span>
+          <span>
+            Delivery travel <strong>{reservation.travelEta} min</strong>
+          </span>
+          <span>
+            Estimated delivery <strong>{formatTime(estimatedDelivery)}</strong>
+          </span>
+          <span>
+            Lease <strong>{formatTime(reservation.leaseExpiresAt)}</strong>
+          </span>
+          <span>
+            Pickup deadline{" "}
+            <strong>{formatTime(reservation.pickupDeadline)}</strong>
+          </span>
+          <span>
+            Batch expires{" "}
+            <strong>{batch ? formatTime(batch.safeUntil) : "—"}</strong>
+          </span>
+        </div>
+      </RoleDetails>
       {active && (
         <>
           <Progress stage={stage} />
@@ -823,26 +944,43 @@ function ShipmentCard({
         </div>
         <Status value={shipment.status} />
       </div>
-      <div className="role-job-facts">
-        <span>
-          Collected <strong>{shipment.quantity}</strong>
-        </span>
-        <span>
-          Confirmed received <strong>{shipment.deliveredQuantity}</strong>
-        </span>
-        <span>
-          In rider custody <strong>{remaining}</strong>
-        </span>
-        <span>
-          Arrival <strong>{formatTime(shipment.eta)}</strong>
-        </span>
-        <span>
-          Expiry <strong>{batch ? formatTime(batch.safeUntil) : "—"}</strong>
-        </span>
-        <span>
-          Last update <strong>{formatTime(shipment.lastHeartbeatAt)}</strong>
-        </span>
+      <div className="role-shipment-lead">
+        <div>
+          <span>{receiverView ? "AWAITING RECEIPT" : "IN CUSTODY"}</span>
+          <strong>{units(remaining)} units</strong>
+          <small>
+            {receiverView
+              ? "Confirm only what physically arrives."
+              : "Keep the remainder visible until handoff."}
+          </small>
+        </div>
+        <div className="role-job-next">
+          <span>STATUS</span>
+          <strong>{statusLabel(shipment.status)}</strong>
+        </div>
       </div>
+      <RoleDetails label="Arrival, custody & freshness">
+        <div className="role-job-facts">
+          <span>
+            Collected <strong>{shipment.quantity}</strong>
+          </span>
+          <span>
+            Confirmed received <strong>{shipment.deliveredQuantity}</strong>
+          </span>
+          <span>
+            In rider custody <strong>{remaining}</strong>
+          </span>
+          <span>
+            Arrival <strong>{formatTime(shipment.eta)}</strong>
+          </span>
+          <span>
+            Expiry <strong>{batch ? formatTime(batch.safeUntil) : "—"}</strong>
+          </span>
+          <span>
+            Last update <strong>{formatTime(shipment.lastHeartbeatAt)}</strong>
+          </span>
+        </div>
+      </RoleDetails>
       <Progress stage={shipment.status === "DELIVERED" ? 5 : 4} />
       {shipment.reason && <p className="role-exception">{shipment.reason}</p>}
       {shipment.status === "IN_TRANSIT" && (
@@ -876,8 +1014,8 @@ function ShipmentCard({
             </span>
           </form>
           {!receiverView && (
-            <div className="role-shipment-tools">
-              <div className="role-actions">
+            <>
+              <div className="role-actions role-shipment-primary-tools">
                 <button
                   className="button secondary"
                   disabled={busy || !rider?.online}
@@ -890,62 +1028,68 @@ function ShipmentCard({
                 >
                   <Radio size={14} /> Progress heartbeat
                 </button>
-                <button
-                  className="button secondary"
-                  disabled={busy}
-                  onClick={() =>
-                    send(act, { type: "REROUTE", shipmentId: shipment.id })
-                  }
-                >
-                  Find safe reroute
-                </button>
-                <button
-                  className="button role-danger-button"
-                  disabled={busy}
-                  onClick={() =>
-                    send(act, {
-                      type: "RIDER_FAILURE",
-                      riderId: shipment.riderId,
-                    })
-                  }
-                >
-                  Report rider failure
-                </button>
               </div>
-              <form
-                className="role-inline-form"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  send(act, {
-                    type: "REPORT_DELAY",
-                    shipmentId: shipment.id,
-                    minutes: Number(delay),
-                  });
-                }}
-              >
-                <label className="field">
-                  Delay · minutes
-                  <input
-                    className="input"
-                    type="number"
-                    required
-                    min="1"
-                    max="10080"
-                    step="1"
-                    value={delay}
-                    disabled={busy}
-                    onChange={(event) => setDelay(event.target.value)}
-                  />
-                </label>
-                <button
-                  className="button secondary"
-                  disabled={busy}
-                  type="submit"
-                >
-                  Report delay
-                </button>
-              </form>
-            </div>
+              <RoleDetails label="Reroute, failure & delay tools">
+                <div className="role-shipment-tools">
+                  <div className="role-actions">
+                    <button
+                      className="button secondary"
+                      disabled={busy}
+                      onClick={() =>
+                        send(act, { type: "REROUTE", shipmentId: shipment.id })
+                      }
+                    >
+                      Find safe reroute
+                    </button>
+                    <button
+                      className="button role-danger-button"
+                      disabled={busy}
+                      onClick={() =>
+                        send(act, {
+                          type: "RIDER_FAILURE",
+                          riderId: shipment.riderId,
+                        })
+                      }
+                    >
+                      Report rider failure
+                    </button>
+                  </div>
+                  <form
+                    className="role-inline-form"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      send(act, {
+                        type: "REPORT_DELAY",
+                        shipmentId: shipment.id,
+                        minutes: Number(delay),
+                      });
+                    }}
+                  >
+                    <label className="field">
+                      Delay · minutes
+                      <input
+                        className="input"
+                        type="number"
+                        required
+                        min="1"
+                        max="10080"
+                        step="1"
+                        value={delay}
+                        disabled={busy}
+                        onChange={(event) => setDelay(event.target.value)}
+                      />
+                    </label>
+                    <button
+                      className="button secondary"
+                      disabled={busy}
+                      type="submit"
+                    >
+                      Report delay
+                    </button>
+                  </form>
+                </div>
+              </RoleDetails>
+            </>
           )}
           <p className="role-help">
             Partial receipt leaves the remainder in rider custody. Only
@@ -1072,7 +1216,7 @@ function RiderSettings({
   busy: boolean;
 }) {
   return (
-    <section className="role-rider-settings">
+    <section className="role-rider-settings role-settings-card">
       <div className="role-rider-identity">
         <span className="role-avatar">{rider.name.slice(0, 1)}</span>
         <div>
@@ -1115,15 +1259,17 @@ function RiderSettings({
           <span>Available for assignments</span>
         </label>
       </div>
-      <NumberEdit
-        label="Carrying capacity · units"
-        value={rider.capacity}
-        min={1}
-        busy={busy}
-        save={(capacity) =>
-          act({ type: "UPDATE_RIDER", riderId: rider.id, capacity })
-        }
-      />
+      <RoleDetails label={`Capacity · ${rider.capacity} units`}>
+        <NumberEdit
+          label="Carrying capacity · units"
+          value={rider.capacity}
+          min={1}
+          busy={busy}
+          save={(capacity) =>
+            act({ type: "UPDATE_RIDER", riderId: rider.id, capacity })
+          }
+        />
+      </RoleDetails>
     </section>
   );
 }
@@ -1143,16 +1289,20 @@ export function RiderConsole(props: ConsoleProps) {
       shipment.riderId === rider?.id ||
       shipment.recovery?.riderId === rider?.id,
   );
+  const activeJobs = jobs.filter((job) =>
+    ACTIVE_RESERVATIONS.includes(job.status),
+  ).length;
+  const custodyUnits = shipments.reduce(
+    (total, shipment) => total + shipment.quantity - shipment.deliveredQuantity,
+    0,
+  );
   return (
     <div className="role-console">
-      <header className="role-heading">
-        <div>
-          <span className="eyebrow">THE RIDER DESK</span>
-          <h1 className="page-heading">Carry the good forward.</h1>
-          <p className="role-description">
-            Accept the relay. Count the handoff. Keep every unit in view.
-          </p>
-        </div>
+      <RoleHero
+        eyebrow="RIDER / FIELD DESK"
+        title="Carry the good forward."
+        description="Take the next safe step. Confirm custody only when the handoff is physical."
+      >
         <label className="field role-entity-select">
           Rider
           <select
@@ -1169,7 +1319,7 @@ export function RiderConsole(props: ConsoleProps) {
             ))}
           </select>
         </label>
-      </header>
+      </RoleHero>
       <Clock {...props} />
       {rider ? (
         <>
@@ -1179,14 +1329,68 @@ export function RiderConsole(props: ConsoleProps) {
             act={props.act}
             busy={busy}
           />
+          <div className="role-signal-grid" aria-label="Rider snapshot">
+            <RoleSignal
+              label="Availability"
+              value={rider.online && rider.available ? "Ready" : "Paused"}
+              detail={
+                rider.online ? "online in the relay" : "offline from dispatch"
+              }
+              accent={rider.online && rider.available}
+            />
+            <RoleSignal
+              label="Next handoff"
+              value={activeJobs}
+              detail="active pickup jobs"
+            />
+            <RoleSignal
+              label="In custody"
+              value={`${units(custodyUnits)} u`}
+              detail="physical units still moving"
+            />
+          </div>
           <p className="role-advisory">
             <ShieldCheck size={17} />
             Going offline or unavailable releases uncollected assignments.
             Collected aid stays in physical custody and needs recovery.
           </p>
+          <section className="role-register role-primary-register">
+            <div className="role-section-title role-section-heading">
+              <span className="eyebrow">NEXT HANDOFF</span>
+              <h2>
+                Pickup jobs <span className="role-count">{activeJobs}</span>
+              </h2>
+              <p>
+                One action at a time. The current step stays in front; the
+                detail waits below.
+              </p>
+            </div>
+            {jobs.length ? (
+              [...jobs]
+                .reverse()
+                .map((shipment) => (
+                  <ReservationCard
+                    key={shipment.id}
+                    reservation={shipment}
+                    {...props}
+                  />
+                ))
+            ) : (
+              <div className="role-empty">
+                <Package size={24} />
+                <div>
+                  <h3>No pickup jobs yet.</h3>
+                  <p>
+                    Go online and available, then dispatch donor stock into the
+                    relay.
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
           <section className="role-register">
-            <div className="role-section-title">
-              <span className="eyebrow">YOUR PHYSICAL MANIFEST</span>
+            <div className="role-section-title role-section-heading">
+              <span className="eyebrow">PHYSICAL CUSTODY</span>
               <h2>
                 On the move{" "}
                 <span className="role-count">
@@ -1198,14 +1402,18 @@ export function RiderConsole(props: ConsoleProps) {
                   }
                 </span>
               </h2>
+              <p>
+                Collected units stay with the rider until the receiving handoff
+                is confirmed.
+              </p>
             </div>
             {shipments.length ? (
               [...shipments]
                 .reverse()
-                .map((shipment) => (
+                .map((reservation) => (
                   <ShipmentCard
-                    key={shipment.id}
-                    shipment={shipment}
+                    key={reservation.id}
+                    shipment={reservation}
                     {...props}
                   />
                 ))
@@ -1214,42 +1422,8 @@ export function RiderConsole(props: ConsoleProps) {
                 <Truck size={24} />
                 <div>
                   <h3>No aid in custody yet.</h3>
-                  <p>
-                    Accept an assigned job and confirm physical pickup to start
-                    a delivery.
-                  </p>
+                  <p>Confirm a physical pickup to start a delivery.</p>
                 </div>
-              </div>
-            )}
-          </section>
-          <section className="role-register">
-            <div className="role-section-title">
-              <span className="eyebrow">BEFORE THE HANDOFF</span>
-              <h2>
-                Pickup jobs{" "}
-                <span className="role-count">
-                  {
-                    jobs.filter((job) =>
-                      ACTIVE_RESERVATIONS.includes(job.status),
-                    ).length
-                  }
-                </span>
-              </h2>
-            </div>
-            {jobs.length ? (
-              [...jobs]
-                .reverse()
-                .map((reservation) => (
-                  <ReservationCard
-                    key={reservation.id}
-                    reservation={reservation}
-                    {...props}
-                  />
-                ))
-            ) : (
-              <div className="role-empty">
-                No pickup jobs for this rider. Go online and available, then
-                dispatch donor stock from the donor or operations desk.
               </div>
             )}
           </section>
@@ -1280,8 +1454,16 @@ function ReceiverSettings({
         (sum, shipment) => sum + shipment.quantity - shipment.deliveredQuantity,
         0,
       );
+  const outstandingDemand = Object.values(receiver.demand).reduce(
+    (sum, value) => sum + value,
+    0,
+  );
+  const freeStorage = Math.max(
+    0,
+    receiver.storageCapacity - receiver.currentStorage - committed,
+  );
   return (
-    <section className="role-receiver-settings">
+    <section className="role-receiver-settings role-settings-card">
       <div className="role-item-heading">
         <div>
           <span className="eyebrow">RECEIVING POINT</span>
@@ -1311,88 +1493,104 @@ function ReceiverSettings({
           </span>
         </label>
       </div>
-      <div className="role-receiver-grid">
-        <div>
-          <h3>Demand by aid type</h3>
-          <p className="role-help">
-            Current outstanding demand; confirmed deliveries reduce it. Save
-            each change explicitly.
-          </p>
-          <div className="role-demand-list">
-            {aidTypes.map((aidType) => (
-              <NumberEdit
-                key={aidType}
-                label={AID_LABELS[aidType]}
-                value={receiver.demand[aidType]}
-                busy={busy}
-                save={(demand) =>
-                  act({
-                    type: "UPDATE_RECEIVER",
-                    receiverId: receiver.id,
-                    aidType,
-                    demand,
-                  })
-                }
-              />
-            ))}
-          </div>
-        </div>
-        <div>
-          <h3>Storage & facilities</h3>
-          <div className="role-storage">
-            <strong>
-              {receiver.currentStorage}
-              <span> / {receiver.storageCapacity} units stored</span>
-            </strong>
-            <p>
-              {committed} incoming / committed ·{" "}
-              {Math.max(
-                0,
-                receiver.storageCapacity - receiver.currentStorage - committed,
-              )}{" "}
-              free for new allocations
+      <div className="role-signal-grid role-receiver-signals">
+        <RoleSignal
+          label="Open status"
+          value={receiver.isOpen ? "Open" : "Closed"}
+          detail="receiving window"
+          accent={receiver.isOpen}
+        />
+        <RoleSignal
+          label="Demand"
+          value={`${units(outstandingDemand)} u`}
+          detail="outstanding across aid types"
+        />
+        <RoleSignal
+          label="Storage free"
+          value={`${units(freeStorage)} u`}
+          detail={`${units(committed)} u committed inbound`}
+        />
+      </div>
+      <RoleDetails label="Edit demand, storage & facilities">
+        <div className="role-receiver-grid">
+          <div>
+            <h3>Demand by aid type</h3>
+            <p className="role-help">
+              Current outstanding demand; confirmed deliveries reduce it. Save
+              each change explicitly.
             </p>
-          </div>
-          <NumberEdit
-            label="Total storage capacity · units"
-            value={receiver.storageCapacity}
-            min={receiver.currentStorage}
-            busy={busy}
-            save={(storageCapacity) =>
-              act({
-                type: "UPDATE_RECEIVER",
-                receiverId: receiver.id,
-                storageCapacity,
-              })
-            }
-          />
-          <fieldset className="role-capabilities" disabled={busy}>
-            <legend>Facilities currently available</legend>
-            <div className="role-check-grid">
-              {capabilities.map((capability) => (
-                <label className="role-check" key={capability}>
-                  <input
-                    type="checkbox"
-                    checked={receiver.capabilities[capability]}
-                    onChange={(event) =>
-                      send(act, {
-                        type: "UPDATE_RECEIVER",
-                        receiverId: receiver.id,
-                        capabilities: { [capability]: event.target.checked },
-                      })
-                    }
-                  />
-                  <span>{CAPABILITY_LABELS[capability]}</span>
-                </label>
+            <div className="role-demand-list">
+              {aidTypes.map((aidType) => (
+                <NumberEdit
+                  key={aidType}
+                  label={AID_LABELS[aidType]}
+                  value={receiver.demand[aidType]}
+                  busy={busy}
+                  save={(demand) =>
+                    act({
+                      type: "UPDATE_RECEIVER",
+                      receiverId: receiver.id,
+                      aidType,
+                      demand,
+                    })
+                  }
+                />
               ))}
             </div>
-          </fieldset>
-          <p className="role-help">
-            Facility changes are applied centrally to every active commitment.
-            Dispatch rechecks demand, storage, timing and aid requirements.
-          </p>
+          </div>
+          <div>
+            <h3>Storage & facilities</h3>
+            <div className="role-storage">
+              <strong>
+                {receiver.currentStorage}
+                <span> / {receiver.storageCapacity} units stored</span>
+              </strong>
+              <p>
+                {committed} incoming / committed · {freeStorage} free for new
+                allocations
+              </p>
+            </div>
+            <NumberEdit
+              label="Total storage capacity · units"
+              value={receiver.storageCapacity}
+              min={receiver.currentStorage}
+              busy={busy}
+              save={(storageCapacity) =>
+                act({
+                  type: "UPDATE_RECEIVER",
+                  receiverId: receiver.id,
+                  storageCapacity,
+                })
+              }
+            />
+            <fieldset className="role-capabilities" disabled={busy}>
+              <legend>Facilities currently available</legend>
+              <div className="role-check-grid">
+                {capabilities.map((capability) => (
+                  <label className="role-check" key={capability}>
+                    <input
+                      type="checkbox"
+                      checked={receiver.capabilities[capability]}
+                      onChange={(event) =>
+                        send(act, {
+                          type: "UPDATE_RECEIVER",
+                          receiverId: receiver.id,
+                          capabilities: { [capability]: event.target.checked },
+                        })
+                      }
+                    />
+                    <span>{CAPABILITY_LABELS[capability]}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <p className="role-help">
+              Facility changes recheck every active commitment through the
+              central engine.
+            </p>
+          </div>
         </div>
-      </div>
+      </RoleDetails>
     </section>
   );
 }
@@ -1582,16 +1780,24 @@ export function ReceiverConsole(props: ConsoleProps) {
       reservation.receiverId === receiver?.id &&
       ACTIVE_RESERVATIONS.includes(reservation.status),
   );
+  const incomingUnits =
+    assigned.reduce((total, reservation) => total + reservation.quantity, 0) +
+    shipments.reduce(
+      (total, shipment) =>
+        total + shipment.quantity - shipment.deliveredQuantity,
+      0,
+    );
+  const receivedUnits = shipments.reduce(
+    (total, shipment) => total + shipment.deliveredQuantity,
+    0,
+  );
   return (
     <div className="role-console">
-      <header className="role-heading">
-        <div>
-          <span className="eyebrow">THE RECEIVER DESK</span>
-          <h1 className="page-heading">Ready for the right help.</h1>
-          <p className="role-description">
-            Keep needs current, facilities honest, and every receipt counted.
-          </p>
-        </div>
+      <RoleHero
+        eyebrow="RECEIVER / INTAKE DESK"
+        title="Ready for the right help."
+        description="Keep demand honest, keep facilities visible, and count only what arrives."
+      >
         <label className="field role-entity-select">
           Receiving point
           <select
@@ -1608,20 +1814,42 @@ export function ReceiverConsole(props: ConsoleProps) {
             ))}
           </select>
         </label>
-      </header>
+      </RoleHero>
       <Clock {...props} />
       {receiver ? (
         <>
           <ReceiverSettings key={receiver.id} receiver={receiver} {...props} />
-          <section className="role-register">
-            <div className="role-section-title">
-              <span className="eyebrow">EXPECTED AT YOUR DOOR</span>
+          <div className="role-signal-grid" aria-label="Receiver snapshot">
+            <RoleSignal
+              label="Incoming"
+              value={`${units(incomingUnits)} u`}
+              detail="assigned or already collected"
+              accent={incomingUnits > 0}
+            />
+            <RoleSignal
+              label="Received"
+              value={`${units(receivedUnits)} u`}
+              detail="confirmed physical handoff"
+            />
+            <RoleSignal
+              label="Latest arrival"
+              value={formatTime(receiver.latestArrival)}
+              detail="receiving deadline"
+            />
+          </div>
+          <section className="role-register role-primary-register">
+            <div className="role-section-title role-section-heading">
+              <span className="eyebrow">AT YOUR DOOR</span>
               <h2>
                 Incoming & received{" "}
                 <span className="role-count">
                   {shipments.length + assigned.length}
                 </span>
               </h2>
+              <p>
+                Confirm the physical handoff. Every other decision stays
+                reversible.
+              </p>
             </div>
             {!shipments.length && !assigned.length && (
               <div className="role-empty">

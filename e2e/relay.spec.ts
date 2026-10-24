@@ -74,6 +74,23 @@ test("root home presents live role cards and opens each console", async ({
   ).toBe(true);
 });
 
+test("role consoles keep the next action visible and secondary detail collapsed", async ({
+  page,
+}) => {
+  for (const role of ["donor", "rider", "receiver"]) {
+    await page.goto(`/#${role}`);
+    await expect(page.locator(".role-hero")).toBeVisible();
+    await expect(page.locator(".role-clock")).toBeVisible();
+    await expect(page.locator(".role-details").first()).toBeVisible();
+    await expect(
+      page.locator("details.role-details").first(),
+    ).not.toHaveAttribute("open");
+  }
+  await expect(
+    page.getByLabel("Receiver open status", { exact: true }),
+  ).toBeVisible();
+});
+
 test("desktop operations renders honest zero state and creates real split allocations", async ({
   page,
   request,
@@ -160,7 +177,9 @@ test("pickup, in-transit closure, reroute and receipt work through real controls
   await page
     .getByRole("button", { name: "Confirm physical pickup", exact: true })
     .click();
-  await expect(page.getByText("40", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.locator(".role-shipment-lead > div:first-child > strong"),
+  ).toHaveText("40 units");
   await page.goto("/#receiver");
   await page
     .getByLabel("Receiving point", { exact: true })
