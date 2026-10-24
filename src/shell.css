@@ -1107,6 +1107,14 @@ textarea.input {
   --ops-paper: #fffef8;
   color: var(--ops-ink);
 }
+.operations-dashboard h2,
+.operations-dashboard h3,
+.operations-dashboard h4 {
+  font-family: inherit;
+}
+.home-role-card h2 {
+  font-family: inherit;
+}
 .operations-dashboard .dashboard-heading {
   min-height: 176px;
   padding: 28px 38px;

@@ -1218,6 +1218,11 @@
 .role-console {
   gap: 14px;
 }
+.role-console h2,
+.role-console h3,
+.role-console h4 {
+  font-family: inherit;
+}
 .role-hero {
   min-height: 154px;
   padding: 27px 34px;
